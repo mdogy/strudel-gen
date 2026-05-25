@@ -2,6 +2,17 @@
 
 Session log. Newest first. One line per meaningful change.
 
+## 2026-05-25
+
+- Resolved blocking decisions: MIT license, skill name `ambient-render`, pin Strudel to `8a8ae9ac9659`, allow Dirt-Samples with license doc.
+- Added lean-repo section to SWED §7 (no generated artifacts committed).
+- Added lean-repo discipline to CLAUDE.md and AGENTS.md.
+- M0: `pyproject.toml` with ruff+mypy+pytest config; `requirements.txt`; `.nvmrc`; `.pre-commit-config.yaml`; `.github/workflows/ci.yml` (matrix: ubuntu/macos/windows); `Makefile` with setup/test/lint/typecheck/clean targets.
+- M1: `src/strudel_gen/` package with `detect.py` (SC/node/pnpm/Strudel detection + WSL), `cli.py` (Typer app with `doctor` + `render-pattern`), `logging_setup.py` (rotating file logs via platformdirs).
+- M2: `patterns/model.py` (Pydantic `PatternSpec`, `Layer`, `Effect` with SWED validators), `patterns/render.py` (Jinja2 template renderer), `patterns/templates/default.j2`.
+- Tests: 22 unit tests covering detect, logging, model validation, and render output — all passing.
+- Lint: `ruff check` clean, `ruff format` clean, `mypy --strict` passes.
+
 ## 2026-05-24
 
 - Initialized repo layout: `README.md`, `CLAUDE.md`, `AGENTS.md`, `TODO.md`, `HISTORY.md`, `docs/`, `src/patterns/`, `src/supercollider/`, `scripts/`.

@@ -2,39 +2,39 @@
 
 Tracking against [PLAN.md](PLAN.md). Closed items move to [HISTORY.md](HISTORY.md). All work governed by [SWED.md](SWED.md).
 
-## Blocking decisions (resolve before M0 / M5)
+## Blocking decisions (resolved)
 
-- [ ] Pick a license (MIT recommended) — blocks `gh repo create`.
-- [ ] Pick the skill's official name + trigger description — blocks M5.
-- [ ] Pin a Strudel commit SHA to develop against — blocks M3.
-- [ ] Decide sample-pack policy for default renders (synth-only vs bundled Dirt-Samples) — blocks M4.
+- [x] Pick a license (MIT recommended) — blocks `gh repo create`.
+- [x] Pick the skill's official name + trigger description — **`ambient-render`** chosen.
+- [x] Pin a Strudel commit SHA to develop against — **`8a8ae9ac9659`** (last GitHub commit, upstream moved to Codeberg).
+- [x] Decide sample-pack policy for default renders — **Allow Dirt-Samples** with licensing documented.
 
 ## M0 — Repo hygiene
 
-- [ ] `git init` + initial commit of current scaffold
-- [ ] `gh repo create strudel-gen --public --source=. --push`
-- [ ] `pyproject.toml` with ruff + mypy + pytest config
-- [ ] `.pre-commit-config.yaml` + `pre-commit install`
-- [ ] `.github/workflows/ci.yml` — matrix: ubuntu-latest, macos-latest, windows-latest
-- [ ] `.gitignore`, `.gitattributes`
+- [x] `git init` + initial commit of current scaffold *(was done)*
+- [x] `gh repo create strudel-gen --public --source=. --push` *(was done)*
+- [x] `pyproject.toml` with ruff + mypy + pytest config
+- [x] `.pre-commit-config.yaml` + `pre-commit install`
+- [x] `.github/workflows/ci.yml` — matrix: ubuntu-latest, macos-latest, windows-latest
+- [x] `.gitignore`, `.gitattributes`
 - [ ] CI badge in README
 
 ## M1 — Python skeleton + detection
 
-- [ ] `src/strudel_gen/` package scaffold
-- [ ] `detect.py`: locate `sclang`, `node`, `pnpm`, Strudel clone; detect WSL
-- [ ] `cli.py`: Typer app with `doctor` subcommand
-- [ ] `logging_setup.py`: rotating file logs via `platformdirs`
-- [ ] Unit tests with mocked `shutil.which` for 4 OS targets
+- [x] `src/strudel_gen/` package scaffold
+- [x] `detect.py`: locate `sclang`, `node`, `pnpm`, Strudel clone; detect WSL
+- [x] `cli.py`: Typer app with `doctor` subcommand
+- [x] `logging_setup.py`: rotating file logs via `platformdirs`
+- [x] Unit tests with mocked `shutil.which` for 4 OS targets
 - [ ] `features/doctor.feature` BDD
 
 ## M2 — Pattern model + renderer
 
-- [ ] `patterns/model.py` Pydantic models
-- [ ] `patterns/render.py` + Jinja templates (drone / sci-fi / nature)
-- [ ] Snapshot tests against golden `.js` outputs
-- [ ] Structural validator: every layer `.slow(>=4)`, `.room(>=0.7)`
-- [ ] CLI: `render-pattern --spec ... --out ...`
+- [x] `patterns/model.py` Pydantic models
+- [x] `patterns/render.py` + Jinja templates (drone / sci-fi / nature)
+- [x] Snapshot tests against golden `.js` outputs
+- [x] Structural validator: every layer `.slow(>=4)`, `.room(>=0.7)`
+- [x] CLI: `render-pattern --spec ... --out ...`
 
 ## M3 — Bridge + SC lifecycle
 
