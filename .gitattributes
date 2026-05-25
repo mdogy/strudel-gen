@@ -1,0 +1,11 @@
+# Normalise line endings to LF everywhere, CRLF for Windows batch only
+* text=auto eol=lf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Treat binary audio / image assets as binary
+*.wav binary
+*.aiff binary
+*.flac binary
+*.png binary
+*.jpg binary

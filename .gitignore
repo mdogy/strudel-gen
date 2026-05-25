@@ -1,0 +1,43 @@
+# Output audio files
+out/
+*.wav
+*.aiff
+*.flac
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+dist/
+build/
+*.egg-info/
+.coverage
+htmlcov/
+
+# Node / pnpm
+node_modules/
+.pnpm-store/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Secrets / local overrides
+.env
+.env.local
+secrets/
+
+# Logs (generated at runtime, not committed)
+*.log
