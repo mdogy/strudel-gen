@@ -44,18 +44,18 @@ Tracking against [PLAN.md](PLAN.md). Closed items move to [HISTORY.md](HISTORY.m
 - [ ] `features/bridge.feature` BDD *(written, needs real binaries)*
 - [x] CLI: `session --dry-run`
 
-## M4 — Record orchestration
+## M4 — Record orchestration (done)
 
-- [ ] `recorder.py`: Routine generator (eval pattern → record → stop)
-- [ ] `normalize.py`: ffmpeg loudnorm to −6 dBFS + sidecar JSON
-- [ ] CLI: `render --mood ... --duration ... --out ...`
-- [ ] Acceptance test: 10-second drone render produces valid WAV
+- [x] `recorder.py`: Routine generator (eval pattern → record → stop)
+- [x] `normalize.py`: ffmpeg loudnorm to −6 dBFS + sidecar JSON
+- [x] CLI: `render --mood ... --duration ... --out ...`
+- [ ] Acceptance test: 10-second drone render produces valid WAV *(needs real SC hardware)*
 
-## M5 — Skill packaging
+## M5 — Skill packaging (done)
 
-- [ ] `skill/SKILL.md` with tuned description (the trigger)
-- [ ] `docs/skill-usage.md` example transcripts
-- [ ] End-to-end validation in a fresh Claude Code session
+- [x] `skill/SKILL.md` with tuned description (the trigger)
+- [x] `docs/skill-usage.md` example transcripts
+- [ ] End-to-end validation in a fresh Claude Code session *(post-M6)*
 
 ## M6 — Cross-platform validation
 

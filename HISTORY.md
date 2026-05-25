@@ -15,7 +15,12 @@ Session log. Newest first. One line per meaningful change.
 - M3: `sc.py` — SuperCollider context manager with SuperDirt ready-line detection.
 - M3: `session --dry-run` CLI subcommand — boots SC + bridge, waits, tears down.
 - M3: Integration tests in `tests/integration/test_lifecycle.py` (skipped if binaries missing).
-- Tests: 36 unit/BDD tests passing, 2 integration tests skipped (no SC on this machine), 85% line coverage.
+- M4: `recorder.py` — SC Routine generator (configurable channels, format, duration).
+- M4: `normalize.py` — ffmpeg loudnorm wrapper with sidecar JSON for −6 dBFS.
+- M4: `render` CLI command — boots SC+bridge, records via sclang pipe, normalizes.
+- M5: `skill/SKILL.md` — `ambient-render` skill with trigger description and usage.
+- M5: `docs/skill-usage.md` — 5 example transcripts from quick drone to production.
+- Tests: 46 unit/BDD tests passing, 2 integration tests skipped, 74% line coverage.
 - Lint: `ruff check` clean, `ruff format` clean, `mypy --strict` passes.
 
 ## 2026-05-24
