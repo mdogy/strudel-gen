@@ -8,8 +8,10 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
+from strudel_gen.bridge import BridgeManager
 from strudel_gen.detect import detect, platform_install_hints
 from strudel_gen.logging_setup import setup_logging
+from strudel_gen.sc import SCManager
 
 app = typer.Typer(
     name="strudel-gen",
@@ -85,6 +87,53 @@ def render_pattern(
     out.write_text(rendered)
     logger.info("Rendered pattern to %s", out)
     console.print(f"[green]\u2713[/green] Pattern written to {out}")
+
+
+@app.command()
+def session(
+    dry_run: Annotated[
+        bool, typer.Option("--dry-run", help="Boot and tear down without rendering")
+    ] = False,
+    duration: Annotated[
+        int, typer.Option("--duration", "-d", help="Recording duration in seconds")
+    ] = 10,
+    timeout_sc: Annotated[
+        float, typer.Option("--timeout-sc", help="Seconds to wait for SC boot")
+    ] = 60.0,
+    timeout_bridge: Annotated[
+        float, typer.Option("--timeout-bridge", help="Seconds to wait for bridge")
+    ] = 15.0,
+) -> None:
+    """Run a full recording session: boot SC, start bridge, record."""
+    result = detect()
+    if not result.sclang:
+        console.print("[red]sclang not found. Run `strudel-gen doctor` for install hints.[/red]")
+        raise typer.Exit(1)
+    if not result.strudel_dir:
+        console.print("[red]Strudel clone not found. Set STRUDEL_DIR env var.[/red]")
+        raise typer.Exit(1)
+
+    console.print("[bold]Starting SuperCollider...[/bold]")
+    sc = SCManager(timeout=timeout_sc)
+    sc.start()
+
+    console.print("[bold]Starting OSC bridge...[/bold]")
+    bridge = BridgeManager(timeout=timeout_bridge)
+    bridge.start()
+
+    console.print(f"[green]Session active. Duration: {duration}s (dry_run={dry_run})[/green]")
+
+    # Let it run or record
+    if dry_run:
+        import time as _time
+
+        console.print(f"[dim]Waiting {duration}s...[/dim]")
+        _time.sleep(duration)
+
+    console.print("[bold]Shutting down...[/bold]")
+    bridge.stop()
+    sc.stop()
+    console.print("[green]Session complete.[/green]")
 
 
 def main() -> None:
