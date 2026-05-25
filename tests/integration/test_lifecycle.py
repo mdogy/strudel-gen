@@ -34,9 +34,12 @@ class TestSCIntegration:
     def test_sclang_version(self) -> None:
         """sclang --version should produce output."""
         import subprocess
+
         result = subprocess.run(
             ["sclang", "--version"],
-            capture_output=True, text=True, timeout=30,
+            capture_output=True,
+            text=True,
+            timeout=30,
         )
         assert result.returncode == 0
         assert "SuperCollider" in result.stdout or "SuperCollider" in result.stderr
@@ -49,7 +52,9 @@ class TestBridgeIntegration:
     def test_pnpm_run_osc_available(self) -> None:
         """The 'pnpm run osc' script should be defined in package.json."""
         import json
+
         from strudel_gen.detect import detect as _detect
+
         det = _detect()
         assert det.strudel_dir is not None
         pkg = json.loads((det.strudel_dir / "package.json").read_text())

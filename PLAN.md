@@ -148,7 +148,7 @@ Each milestone is **a single PR**, ending green. The order matters — don't reo
 
 **Done when:** a real WAV lands on disk that an audio player can open and that sounds like the requested mood.
 
-### M5 — Skill packaging (½ day)
+### M5 — Skill packaging (½ day, not complete)
 
 **Outcome:** the Claude Code skill exists and is invokable.
 

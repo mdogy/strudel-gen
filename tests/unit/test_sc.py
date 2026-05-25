@@ -29,9 +29,7 @@ class TestSCManagerStart:
         return mock_proc
 
     def test_start_superdirt_ready_detected(self):
-        mock_proc = self._make_mock_proc(
-            "compiling...\nSuperDirt: listening on port 57120\n"
-        )
+        mock_proc = self._make_mock_proc("compiling...\nSuperDirt: listening on port 57120\n")
 
         with patch("subprocess.Popen", return_value=mock_proc):
             manager = SCManager(timeout=5)
@@ -39,9 +37,7 @@ class TestSCManagerStart:
             assert manager._process is not None
 
     def test_start_timeout_raises(self):
-        mock_proc = self._make_mock_proc(
-            "compiling...\nstill booting...\nSC not ready yet\n"
-        )
+        mock_proc = self._make_mock_proc("compiling...\nstill booting...\nSC not ready yet\n")
 
         with patch("subprocess.Popen", return_value=mock_proc):
             manager = SCManager(timeout=0.1)
@@ -59,3 +55,15 @@ class TestSCManagerContextManager:
             with SCManager(timeout=5) as mgr:
                 assert mgr._process is not None
             mock_proc.terminate.assert_called_once()
+
+    def test_stop_kills_process_after_timeout(self):
+        mock_proc = MagicMock(spec=subprocess.Popen)
+        mock_proc.pid = 54321
+        mock_proc.wait.side_effect = [subprocess.TimeoutExpired(cmd="sclang", timeout=10), None]
+
+        manager = SCManager(timeout=5)
+        manager._process = mock_proc
+        manager.stop()
+
+        mock_proc.terminate.assert_called_once()
+        mock_proc.kill.assert_called_once()

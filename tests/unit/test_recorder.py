@@ -6,7 +6,7 @@ from strudel_gen.recorder import RecorderScript
 
 
 class TestRecorderScript:
-    def test_generate_basic(self):
+    def test_generate_basic(self) -> None:
         rec = RecorderScript(
             output_path=Path("/tmp/test.wav"),
             duration=30.0,
@@ -18,7 +18,7 @@ class TestRecorderScript:
         assert "test.wav" in script
         assert "duration: 30.0" in script
 
-    def test_generate_custom_channels(self):
+    def test_generate_custom_channels(self) -> None:
         rec = RecorderScript(
             output_path=Path("/tmp/stems.wav"),
             duration=60.0,
@@ -32,7 +32,7 @@ class TestRecorderScript:
         assert "s.recChannels = 6" in script
         assert "duration: 60.0" in script
 
-    def test_generate_expands_user_path(self):
+    def test_generate_expands_user_path(self) -> None:
         rec = RecorderScript(
             output_path=Path("~/Desktop/output.wav"),
             duration=10.0,
@@ -42,7 +42,7 @@ class TestRecorderScript:
         assert "Desktop" in script
         assert "output.wav" in script
 
-    def test_to_temp_file_creates_scd(self, tmp_path):
+    def test_to_temp_file_creates_scd(self, tmp_path: Path) -> None:
         rec = RecorderScript(
             output_path=Path("/tmp/test.wav"),
             duration=5.0,

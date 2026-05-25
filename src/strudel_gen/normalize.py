@@ -39,7 +39,11 @@ def normalize_to_dbfs(
     if output_path is None:
         output_path = input_path
 
-    out = input_path.parent / f"{input_path.stem}.normalized{input_path.suffix}"
+    out = (
+        input_path.parent / f"{input_path.stem}.normalized{input_path.suffix}"
+        if output_path == input_path
+        else output_path
+    )
 
     # First pass: measure loudness
     measure_cmd = [

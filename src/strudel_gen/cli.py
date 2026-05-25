@@ -23,6 +23,12 @@ console = Console()
 logger = logging.getLogger(__name__)
 
 
+@app.callback()
+def main_callback() -> None:
+    """Initialize process-wide logging for all CLI entrypoints."""
+    setup_logging()
+
+
 @app.command()
 def doctor(
     verbose: Annotated[
@@ -233,7 +239,6 @@ def render(
 
 
 def main() -> None:
-    setup_logging()
     app()
 
 

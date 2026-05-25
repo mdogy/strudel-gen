@@ -1,5 +1,6 @@
 """Detect prerequisites: sclang, node, pnpm, Strudel clone, OS platform + WSL."""
 
+import os
 import platform
 import shutil
 from dataclasses import dataclass
@@ -30,6 +31,12 @@ def _find_strudel_dir() -> Path | None:
 
     Checks STRUDEL_DIR env var first, then common defaults.
     """
+    env_override = os.environ.get("STRUDEL_DIR")
+    if env_override:
+        override_path = Path(env_override).expanduser()
+        if (override_path / "package.json").exists():
+            return override_path.resolve()
+
     env_dir = Path(__file__).resolve().parent.parent.parent.parent / "strudel"
     candidates: list[Path] = [
         Path(p)

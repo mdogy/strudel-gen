@@ -20,6 +20,9 @@ dependencies = [
     "rich>=13.0",
 ]
 
+[project.scripts]
+strudel-gen = "strudel_gen.cli:app"
+
 [project.optional-dependencies]
 dev = [
     "pytest>=8.0",
@@ -50,7 +53,7 @@ disallow_any_unimported = false
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-v --tb=short"
+addopts = "-v --tb=short --cov --cov-fail-under=85"
 markers = [
     "slow: slow tests (acceptance / integration) that are skipped by default",
     "network: tests that require network access",

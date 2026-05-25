@@ -41,7 +41,7 @@ make render ARGS="--mood 'cold underwater drone' --duration 240 --out ~/Desktop/
 make session ARGS="--dry-run --duration 5"
 
 # Render a pattern spec JSON to a .js file
-make render ARGS="render-pattern --spec spec.json --out pattern.js"
+make render-pattern ARGS="--spec spec.json --out pattern.js"
 ```
 
 ## How it works

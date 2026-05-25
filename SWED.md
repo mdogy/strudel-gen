@@ -33,9 +33,9 @@ These are **non-negotiable** rules for this project. Any agent or human contribu
 
 - **Python**: `ruff check` + `ruff format` (replaces flake8/black/isort). Config in `pyproject.toml`. CI fails on any lint error.
 - **TypeScript** (if introduced): `eslint` + `prettier`, or `biome` (preferred — single tool).
-- **Shell scripts**: `shellcheck` clean.
-- **Markdown**: `markdownlint` clean for docs in `docs/`.
-- **Pre-commit hook** runs lint+format+type-check before every commit. Install via `pre-commit install`. Hook is mandatory; bypassing with `--no-verify` requires a HISTORY.md note.
+- **Shell scripts**: `shellcheck` clean. Enforced in CI via `ludeeus/action-shellcheck`.
+- **Markdown**: `markdownlint-cli2` clean for all repo `*.md` + `docs/**/*.md` + `skill/**/*.md`. Configured in `.markdownlint.jsonc`. Enforced in CI via `DavidAnson/markdownlint-cli2-action`.
+- **Pre-commit hook** runs lint+format+type-check before every commit. Install via `pre-commit install`. Hook is mandatory; bypassing with `--no-verify` requires a HISTORY.md note. Also run in CI via `pre-commit run --all-files`.
 
 ## 4. Testing
 
@@ -45,7 +45,7 @@ These are **non-negotiable** rules for this project. Any agent or human contribu
   1. **Unit tests** — pure, fast, isolated. Mock `subprocess`, filesystem, network, time. Use `pytest` + `pytest-mock` (or `unittest.mock`).
   2. **Integration tests** — exercise real subprocesses where safe (e.g. invoking `sclang -h`), real temp files. Skipped automatically if external binaries are missing, with a clear skip reason.
   3. **Acceptance tests** — end-to-end via the BDD features. May be marked `@slow` and gated behind a CI label, but must run in nightly CI.
-- **Coverage**: ≥85% line coverage on the orchestration package. `pytest --cov` enforced in CI.
+- **Coverage**: ≥85% line coverage on the orchestration package. `pytest --cov --cov-fail-under=85` enforced in CI and via `make test`.
 - **No test is allowed to depend on network access** unless explicitly marked `@pytest.mark.network` and skipped by default.
 - **Fixtures over setup boilerplate.** Shared fixtures in `tests/conftest.py`.
 
@@ -92,7 +92,7 @@ Rules:
 - **No committed wheel files, egg-info, coverage reports, or log files.**
 - A `make clean` target must restore the checkout to a pristine state (remove all generated files, keep only VCS-tracked ones).
 
-## 9. Documentation
+## 8. Documentation
 
 - **Kept current.** A PR that changes behavior must update the relevant doc in the same commit. Reviewers reject doc-stale PRs.
 - **What lives where**:
@@ -107,7 +107,7 @@ Rules:
 - **Docstrings**: every public function/class in Python has a docstring (one-line summary minimum; full Google-style for non-trivial APIs).
 - **API docs auto-generated** via `mkdocs` + `mkdocstrings` published to GitHub Pages on every `main` push.
 
-## 10. Minimize cruft
+## 9. Minimize cruft
 
 - **No dead code.** Delete it; git remembers.
 - **No commented-out code.** Delete it; git remembers.
@@ -116,7 +116,7 @@ Rules:
 - **No backward-compat shims** until there's an actual external consumer.
 - **Dependency budget**: every new dependency needs a line in PR description explaining why a stdlib option doesn't suffice.
 
-## 11. Definition of Done
+## 10. Definition of Done
 
 A change is "done" only when **all** of the below are true:
 

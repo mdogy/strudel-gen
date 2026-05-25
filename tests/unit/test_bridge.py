@@ -3,7 +3,7 @@
 import io
 import subprocess
 from pathlib import Path
-from unittest.mock import MagicMock, PropertyMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -48,9 +48,7 @@ class TestBridgeManagerStart:
             assert manager._process is not None
 
     def test_start_timeout_raises(self):
-        mock_proc = self._make_mock_proc(
-            "some output\nstill loading\nmore logs\nno ready signal\n"
-        )
+        mock_proc = self._make_mock_proc("some output\nstill loading\nmore logs\nno ready signal\n")
 
         with (
             patch("subprocess.Popen", return_value=mock_proc),
@@ -76,3 +74,20 @@ class TestBridgeManagerContextManager:
             with BridgeManager(timeout=5) as mgr:
                 assert mgr._process is not None
             mock_proc.terminate.assert_called_once()
+
+    def test_stop_kills_process_after_timeout(self):
+        mock_proc = MagicMock(spec=subprocess.Popen)
+        mock_proc.pid = 12345
+        mock_proc.wait.side_effect = [subprocess.TimeoutExpired(cmd="pnpm", timeout=5), None]
+
+        with (
+            patch("subprocess.Popen", return_value=mock_proc),
+            patch("strudel_gen.bridge.detect") as mock_detect,
+        ):
+            mock_detect.return_value.strudel_dir = Path("/fake/strudel")
+            manager = BridgeManager(timeout=5)
+            manager._process = mock_proc
+            manager.stop()
+
+        mock_proc.terminate.assert_called_once()
+        mock_proc.kill.assert_called_once()

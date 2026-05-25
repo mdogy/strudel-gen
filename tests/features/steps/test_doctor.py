@@ -133,6 +133,4 @@ def then_exit_one() -> None:
 @then(parsers.parse('the output should contain "{text}"'))
 def then_output_contains(text: str) -> None:
     assert _context.result is not None
-    assert text in _context.result.output, (
-        f"Expected '{text}' in output:\n{_context.result.output}"
-    )
+    assert text in _context.result.output, f"Expected '{text}' in output:\n{_context.result.output}"

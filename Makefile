@@ -1,4 +1,4 @@
-.PHONY: setup clean test lint typecheck format doctor render
+.PHONY: setup clean test lint typecheck format doctor render render-pattern session
 
 # === Python ===
 VENV = .venv
@@ -20,11 +20,11 @@ clean:
 	rm -rf $(VENV) _build/ _output/ out/ .pytest_cache/ .mypy_cache/ .ruff_cache/
 	rm -rf __pycache__ */__pycache__ */*/__pycache__
 	rm -f .coverage
-	find . -name "*.pyc" -delete
-	find . -name "*.egg-info" -type d -exec rm -rf {} + 2>/dev/null || true
+	find . -path "./$(VENV)" -prune -o -name "*.pyc" -delete
+	find . -path "./$(VENV)" -prune -o -name "*.egg-info" -type d -exec rm -rf {} + 2>/dev/null || true
 
 test: $(VENV)/bin/activate
-	$(PYTEST) tests/ -v --tb=short
+	$(PYTEST) tests/ -v --tb=short --cov --cov-fail-under=85
 
 lint: $(VENV)/bin/activate
 	$(RUFF) check src/
@@ -36,7 +36,19 @@ format: $(VENV)/bin/activate
 	$(RUFF) format src/
 
 doctor: $(VENV)/bin/activate
-	$(PYTHON) -m strudel_gen.cli doctor
+	$(PYTHON) -m strudel_gen.cli doctor $(ARGS)
 
 render: $(VENV)/bin/activate
+	$(PYTHON) -m strudel_gen.cli render $(ARGS)
+
+render-pattern: $(VENV)/bin/activate
 	$(PYTHON) -m strudel_gen.cli render-pattern $(ARGS)
+
+session: $(VENV)/bin/activate
+	$(PYTHON) -m strudel_gen.cli session $(ARGS)
+
+# === Branch protection (admin needed) ===
+# Run once after initial CI green to lock main. Requires `gh` auth + admin access.
+protect-main:
+	gh api -X PUT repos/mdogy/strudel-gen/branches/main/protection \
+	  --input - <<< '{"required_status_checks":{"checks":[{"context":"Lint + typecheck"},{"context":"ShellCheck"},{"context":"Markdown lint"},{"context":"Pre-commit hooks"},{"context":"Test (ubuntu-latest)"},{"context":"Test (macos-latest)"},{"context":"Test (windows-latest)"},{"context":"Test (WSL2 / Ubuntu)"}],"strict":true},"enforce_admins":true,"required_pull_request_reviews":null,"restrictions":null}'
