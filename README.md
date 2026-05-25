@@ -1,5 +1,7 @@
 # strudel-gen
 
+[![CI](https://github.com/mdogy/strudel-gen/actions/workflows/ci.yml/badge.svg)](https://github.com/mdogy/strudel-gen/actions/workflows/ci.yml)
+
 Local, code-driven pipeline for generating ambient soundscape audio files (WAV) suitable for video backgrounds.
 
 ## Architecture

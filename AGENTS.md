@@ -57,6 +57,14 @@ Roles for any AI agent (Claude Code, Codex, etc.) collaborating on this project.
 8. Wait for `Recording stopped.`
 9. Normalize to -6 dBFS before delivering.
 
+## Repo discipline
+
+- **No generated or large files committed.** Everything buildable/installable is built from source via `Makefile`.
+- **Ignored directories**: `_build/`, `_output/`, `.venv/`, `out/`, `node_modules/`, `__pycache__/`, `*.wav`, `*.log`.
+- **Python venv** lives in `.venv/` (locally, not committed).
+- **Node version** managed via `.nvmrc`.
+- Run `make setup` after clone to install all dependencies.
+
 ## Handoff
 
 When the Pattern Composer finishes a file, the Recordist takes over. Each agent should leave a one-line entry in [HISTORY.md](HISTORY.md).

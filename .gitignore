@@ -1,5 +1,12 @@
-# Output audio files
+# Build artifacts
+_build/
+_output/
 out/
+dist/
+build/
+*.egg-info/
+
+# Audio output
 *.wav
 *.aiff
 *.flac
@@ -13,9 +20,6 @@ __pycache__/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
-dist/
-build/
-*.egg-info/
 .coverage
 htmlcov/
 

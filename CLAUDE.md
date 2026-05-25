@@ -30,8 +30,17 @@ See [docs/guide.md](docs/guide.md) Part 5 for syntax reference and starter templ
 - Recording always happens in the **SuperCollider IDE** or via `scripts/record.sh`, never from Strudel.
 - All recordings: WAV, int24, stereo (or 6ch for stems), 48 kHz preferred for video.
 
+## Repo size discipline
+
+This repo must stay lean — no large or generated files committed:
+- **Build artifacts, virtual environments, audio output, and logs** go in `.gitignore`-covered directories (`_build/`, `_output/`, `.venv/`, `out/`, etc.).
+- **Use the Makefile** for all build/clean operations: `make setup`, `make test`, `make clean`.
+- **Python deps**: managed via `pyproject.toml` + `requirements.txt`; `.venv/` is ignored.
+- **Node deps**: `.nvmrc` pins the Node version; `node_modules/` is ignored.
+
 ## What NOT to do
 
-- Don't introduce build tooling, package.json, or frameworks. This repo holds patterns + shell scripts; Strudel itself lives in a separate clone.
+- Don't introduce build tooling, package.json, or frameworks beyond what `Makefile` handles. This repo holds patterns + Python orchestration; Strudel itself lives in a separate clone.
 - Don't add comments inside pattern files explaining what the code does — the patterns are short and the templates in the guide are the reference.
 - Don't change OSC port 57120 without updating the SC startup file in lockstep.
+- Don't commit generated files, audio output, virtual environments, or build artifacts.

@@ -82,7 +82,17 @@ Rules:
 - **WSL specifics**: detect with `/proc/version` containing `microsoft`. When detected, audio/OSC must route through the Windows host (document this clearly — SuperCollider does not run usefully inside WSL for audio).
 - **CI matrix**: GitHub Actions runs the full suite on `ubuntu-latest`, `macos-latest`, `windows-latest`. WSL is exercised via `windows-latest` + `wsl-bash` action.
 
-## 7. Documentation
+## 7. Lean repo — no generated artifacts
+
+- **No large or generated files** are committed. The repo must stay small enough to clone instantly.
+- **Build artifacts** (`_build/`, `_output/`, `.venv/`, `node_modules/`, etc.) go in `.gitignore`-covered directories. See `.gitignore` for the canonical list.
+- **Makefile** drives all build/clean/test operations so nothing needs to be in the repo except source + config.
+- **Python**: dependencies pinned in `pyproject.toml` + `requirements.txt`; virtual environments live in `.venv/` (ignored).
+- **Node**: `.nvmrc` declares the Node version; `node_modules/` is ignored; dependencies installed at build time.
+- **No committed wheel files, egg-info, coverage reports, or log files.**
+- A `make clean` target must restore the checkout to a pristine state (remove all generated files, keep only VCS-tracked ones).
+
+## 9. Documentation
 
 - **Kept current.** A PR that changes behavior must update the relevant doc in the same commit. Reviewers reject doc-stale PRs.
 - **What lives where**:
@@ -97,7 +107,7 @@ Rules:
 - **Docstrings**: every public function/class in Python has a docstring (one-line summary minimum; full Google-style for non-trivial APIs).
 - **API docs auto-generated** via `mkdocs` + `mkdocstrings` published to GitHub Pages on every `main` push.
 
-## 8. Minimize cruft
+## 10. Minimize cruft
 
 - **No dead code.** Delete it; git remembers.
 - **No commented-out code.** Delete it; git remembers.
@@ -106,7 +116,7 @@ Rules:
 - **No backward-compat shims** until there's an actual external consumer.
 - **Dependency budget**: every new dependency needs a line in PR description explaining why a stdlib option doesn't suffice.
 
-## 9. Definition of Done
+## 11. Definition of Done
 
 A change is "done" only when **all** of the below are true:
 
