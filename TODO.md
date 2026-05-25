@@ -17,18 +17,18 @@ Tracking against [PLAN.md](PLAN.md). Closed items move to [HISTORY.md](HISTORY.m
 - [x] `.pre-commit-config.yaml` + `pre-commit install`
 - [x] `.github/workflows/ci.yml` — matrix: ubuntu-latest, macos-latest, windows-latest
 - [x] `.gitignore`, `.gitattributes`
-- [ ] CI badge in README
+- [x] CI badge in README
 
-## M1 — Python skeleton + detection
+## M1 — Python skeleton + detection (done)
 
 - [x] `src/strudel_gen/` package scaffold
 - [x] `detect.py`: locate `sclang`, `node`, `pnpm`, Strudel clone; detect WSL
 - [x] `cli.py`: Typer app with `doctor` subcommand
 - [x] `logging_setup.py`: rotating file logs via `platformdirs`
 - [x] Unit tests with mocked `shutil.which` for 4 OS targets
-- [ ] `features/doctor.feature` BDD
+- [x] `features/doctor.feature` BDD
 
-## M2 — Pattern model + renderer
+## M2 — Pattern model + renderer (done)
 
 - [x] `patterns/model.py` Pydantic models
 - [x] `patterns/render.py` + Jinja templates (drone / sci-fi / nature)
@@ -36,13 +36,13 @@ Tracking against [PLAN.md](PLAN.md). Closed items move to [HISTORY.md](HISTORY.m
 - [x] Structural validator: every layer `.slow(>=4)`, `.room(>=0.7)`
 - [x] CLI: `render-pattern --spec ... --out ...`
 
-## M3 — Bridge + SC lifecycle
+## M3 — Bridge + SC lifecycle (done)
 
-- [ ] `bridge.py`: spawn `pnpm run osc`, detect ready line, context manager
-- [ ] `sc.py`: spawn `sclang`, evaluate startup, detect SuperDirt ready
-- [ ] Integration tests (skipped if binaries missing)
-- [ ] `features/bridge.feature` BDD
-- [ ] CLI: `session --dry-run`
+- [x] `bridge.py`: spawn `pnpm run osc`, detect ready line, context manager
+- [x] `sc.py`: spawn `sclang`, evaluate startup, detect SuperDirt ready
+- [x] Integration tests (skipped if binaries missing)
+- [ ] `features/bridge.feature` BDD *(written, needs real binaries)*
+- [x] CLI: `session --dry-run`
 
 ## M4 — Record orchestration
 
