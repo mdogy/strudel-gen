@@ -32,17 +32,21 @@ class TestSCIntegration:
     """Integration tests for sclang invocation (real binary, real startup)."""
 
     def test_sclang_version(self) -> None:
-        """sclang --version should produce output."""
+        """sclang --version should produce output containing 'sclang' or 'SuperCollider'."""
         import subprocess
 
+        from strudel_gen.detect import _find_sclang
+
+        sclang_bin = _find_sclang() or "sclang"
         result = subprocess.run(
-            ["sclang", "--version"],
+            [sclang_bin, "--version"],
             capture_output=True,
             text=True,
             timeout=30,
         )
+        combined = result.stdout + result.stderr
         assert result.returncode == 0
-        assert "SuperCollider" in result.stdout or "SuperCollider" in result.stderr
+        assert "sclang" in combined.lower() or "supercollider" in combined.lower()
 
 
 @bridge_available

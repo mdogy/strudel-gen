@@ -15,8 +15,18 @@ brew install --cask supercollider   # macOS (Homebrew)
 Verify:
 
 ```bash
-which sclang     # should print a path
-sclang --version # should print SuperCollider version
+/Applications/SuperCollider.app/Contents/MacOS/sclang --version
+# SuperCollider 3.14.x (...)
+```
+
+`strudel-gen` finds sclang inside the app bundle automatically — **no symlink needed**.
+If you want it on your shell `PATH` for convenience:
+
+```bash
+mkdir -p ~/.local/bin
+ln -sf /Applications/SuperCollider.app/Contents/MacOS/sclang ~/.local/bin/sclang
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc
+source ~/.zshrc
 ```
 
 ## Step 2 — Install sc3-plugins

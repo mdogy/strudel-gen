@@ -53,9 +53,36 @@ def _find_strudel_dir() -> Path | None:
     return None
 
 
+def _find_sclang() -> str | None:
+    """Locate sclang on PATH or in well-known app-bundle locations."""
+    found = shutil.which("sclang")
+    if found:
+        return found
+
+    # macOS: sclang lives inside the .app bundle and is not always on PATH
+    macos_bundle_candidates = [
+        Path("/Applications/SuperCollider.app/Contents/MacOS/sclang"),
+        Path.home() / "Applications" / "SuperCollider.app" / "Contents" / "MacOS" / "sclang",
+    ]
+    for candidate in macos_bundle_candidates:
+        if candidate.exists():
+            return str(candidate)
+
+    # Windows: common installer location
+    win_candidates = [
+        Path("C:/Program Files/SuperCollider/sclang.exe"),
+        Path("C:/Program Files (x86)/SuperCollider/sclang.exe"),
+    ]
+    for candidate in win_candidates:
+        if candidate.exists():
+            return str(candidate)
+
+    return None
+
+
 def detect() -> DetectionResult:
     """Probe the environment for all prerequisites."""
-    sclang = shutil.which("sclang")
+    sclang = _find_sclang()
     node = shutil.which("node")
     pnpm = shutil.which("pnpm")
     strudel_dir = _find_strudel_dir()

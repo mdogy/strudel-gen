@@ -20,27 +20,40 @@ class SCManager:
 
     Args:
         startup_file: Path to the SC startup .scd file.
+        sclang: Absolute path to sclang binary. Auto-detected if None.
         timeout: Seconds to wait for the SuperDirt ready message.
     """
 
     def __init__(
         self,
         startup_file: Path | None = None,
+        sclang: str | None = None,
         timeout: float = 60.0,
     ) -> None:
         if startup_file is None:
             startup_file = Path(__file__).resolve().parent.parent / "supercollider" / "startup.scd"
         if not startup_file.exists():
             raise SCError(f"Startup file not found: {startup_file}")
+        if sclang is None:
+            from strudel_gen.detect import _find_sclang
+
+            sclang = _find_sclang()
+        if sclang is None:
+            raise SCError(
+                "sclang not found. Install SuperCollider and ensure sclang is on PATH, "
+                "or symlink: ln -s /Applications/SuperCollider.app/Contents/MacOS/sclang "
+                "~/.local/bin/sclang"
+            )
+        self._sclang = sclang
         self._startup_file = startup_file
         self._timeout = timeout
         self._process: subprocess.Popen[str] | None = None
 
     def start(self) -> None:
         """Start sclang and wait for SuperDirt to announce it is listening."""
-        logger.info("Starting sclang with startup file %s", self._startup_file)
+        logger.info("Starting sclang (%s) with startup file %s", self._sclang, self._startup_file)
         self._process = subprocess.Popen(
-            ["sclang", str(self._startup_file)],
+            [self._sclang, str(self._startup_file)],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,

@@ -150,7 +150,8 @@ class TestRenderCommand:
 
         assert result.exit_code == 0
         call_args = mock_run.call_args[0][0]
-        assert call_args[0] == "sclang"
+        # sclang may be a full path (e.g. from app bundle detection) or bare "sclang"
+        assert str(call_args[0]).endswith("sclang") or str(call_args[0]).endswith("sclang.exe")
         assert call_args[1] == str(scd_path)
         assert call_args[2] == str(out_path)
         assert "Render complete" in result.output

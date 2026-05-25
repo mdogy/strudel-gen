@@ -33,6 +33,7 @@ def _render_via_sc_script(
     scd_path: Path,
     out_path: Path,
     duration: float,
+    sclang: str | None = None,
     timeout: float = 300.0,
 ) -> int:
     """Run a self-contained .scd script that boots, plays, records and exits.
@@ -44,12 +45,16 @@ def _render_via_sc_script(
         scd_path: Absolute path to the .scd render script.
         out_path: Absolute path for the output WAV file.
         duration: Recording duration in seconds.
+        sclang: Path to sclang binary. Auto-detected if None.
         timeout: Maximum seconds to wait before killing sclang.
 
     Returns:
         sclang exit code (0 = success).
     """
-    cmd = ["sclang", str(scd_path), str(out_path), str(int(duration))]
+    from strudel_gen.detect import _find_sclang
+
+    sclang = sclang or _find_sclang() or "sclang"
+    cmd = [sclang, str(scd_path), str(out_path), str(int(duration))]
     logger.info("Running SC script: %s", " ".join(cmd))
     result = subprocess.run(
         cmd,
