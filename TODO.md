@@ -62,9 +62,143 @@ All P0 boxes above are checked except M5 end-to-end validation (human-in-the-loo
   - Green check from re-run of the audit against this file.
 - [ ] Run `make protect-main` (requires `gh` auth + admin access).
 
-**Only after that PR merges may any of the items below be picked up.**
+---
+
+## 🛑 P0.6 — CI IS RED (audit #2, 2026-05-25)
+
+Local quality is excellent (97.72% coverage, all linters clean). **But the latest commit `22fd265` left CI red.** The P0 done-gate explicitly requires CI green on all jobs — it is not. Fix in this order, smallest blast radius first.
+
+### F1 — Markdownlint: 23 MD013 line-length violations
+
+The newly-rewritten P0 block in `TODO.md` is the single biggest source (17 of 23). `SWED.md` contributes 5 more.
+
+- [ ] Reflow long lines to ≤120 chars in `SWED.md` (lines 90, 93, 97, 107, 117) and `TODO.md` (lines 3, 9, 15, 17, 18, 22, 23, 24, 30, 31, 40, 44, 48, 49, 50, 51, 55, 82, 120).
+- [ ] OR raise the limit in `.markdownlint.jsonc` with a HISTORY note justifying the deviation from SWED §3.
+- [ ] Run `npx markdownlint-cli2 "**/*.md"` locally before committing to prevent recurrence.
+
+### F2 — Pre-commit ruff drift (local green, CI red)
+
+Pre-commit's pinned `ruff v0.4.9` flags isort I001 violations in three test files; the locally-installed `ruff` does not. CI's pre-commit hook auto-rewrites the files and exits 1.
+
+- [ ] Apply the auto-fixes to `tests/unit/test_model.py`, `tests/unit/test_normalize.py`, `tests/unit/test_sc.py` (remove blank lines between `import pytest` and the next import).
+- [ ] **Pin a single ruff version** across the repo: `pyproject.toml` dev deps, `.pre-commit-config.yaml` `rev:`, and any CI install step. Currently three different pin floors → silent drift.
+- [ ] Add `pre-commit run --all-files` to the local `make lint` target so the same hook runs locally and in CI.
+- [ ] Document the version-pin policy in SWED §3.
+
+### F3 — WSL2 job: bullseye-backports apt repo is dead
+
+`Vampire/setup-wsl@v3` defaults to Debian Bullseye (despite the job being named "Ubuntu"). One repo (`bullseye-backports`) has no Release file → `apt-get update` exits 100 → Python deps never install → unit tests never run.
+
+- [ ] Specify `distribution: Ubuntu-22.04` in the `setup-wsl` action inputs (recommended — matches SWED §6 wording "WSL2 / Ubuntu").
+- [ ] OR strip `bullseye-backports` from `/etc/apt/sources.list` before `apt update`.
+- [ ] Verify with a re-run that `pytest tests/unit/` actually executes inside WSL.
+
+### F4 — Branch protection not enforced
+
+`make protect-main` exists but has not been executed. Nothing prevents a direct push that bypasses CI.
+
+- [ ] Run `make protect-main` (requires admin on the GitHub repo).
+- [ ] Confirm via `gh api repos/mdogy/strudel-gen/branches/main/protection` that required-status-checks includes every CI job listed in the done-gate.
+- [ ] Record completion in HISTORY.md.
+
+### F5 — `tests/` not type-checked
+
+`mypy --strict` is scoped to `src/` only (both `Makefile`/`pyproject.toml` and the pre-commit hook). SWED §2 requires "type hints everywhere".
+
+- [ ] Extend mypy scope to `src/ tests/` in `Makefile`, `pyproject.toml`, and `.pre-commit-config.yaml`.
+- [ ] Add any annotations needed to make the test suite pass strict mode.
+
+### Smaller / cleanup (audit #2)
+
+- [ ] **Node 20 deprecation**: bump `actions/checkout@v4` and `actions/setup-python@v5` to current latest to silence runner warnings (cosmetic until Sept 2026).
+- [ ] **`BridgeContext` singleton** in `tests/features/steps/test_bridge.py` is module-level; convert to a pytest fixture to prevent state leakage between scenarios.
+- [ ] **`requirements.txt` vs `pyproject.toml` drift policy**: pick one as canonical and document. Currently both list dependencies independently — they happen to match today, they won't tomorrow.
+
+### Recommended commit order
+
+1. `docs: reflow SWED.md + TODO.md long lines (markdownlint MD013)` — fixes F1.
+2. `chore: pin ruff to a single version + apply fixes to tests/` — fixes F2.
+3. `ci: pin setup-wsl to Ubuntu-22.04` — fixes F3.
+4. `feat: extend mypy --strict to tests/` — fixes F5.
+5. `chore: bump GitHub Actions to current versions` — silences Node 20 warnings.
+6. *(human)* `make protect-main` + HISTORY entry — fixes F4.
+7. *(human)* M5 e2e validation session, see P0.7 below — fixes the original M5 gap.
+8. Only then: open the "P0 complete" PR.
 
 ---
+
+## 🛑 P0.7 — Skill is not actually runnable end-to-end yet
+
+The Dr. Who test exposed two gaps that block any real e2e validation, regardless of what the milestone checkboxes say.
+
+### Gap A — Host machine is missing 3 of 4 prerequisites
+
+`make doctor` on this machine (2026-05-25) reports:
+
+```
+sclang (SuperCollider)  ✗ NOT FOUND
+node                    ✓ /opt/homebrew/bin/node
+pnpm                    ✗ NOT FOUND
+Strudel clone           ✗ NOT FOUND
+```
+
+Until these are installed locally, no render can run. None of this is the skill's fault — they are user-machine prerequisites — but it blocks the M5 validation step.
+
+- [ ] `brew install supercollider` (or download from supercollider.github.io).
+- [ ] Install sc3-plugins per `docs/guide.md` §1.2.
+- [ ] Install SuperDirt quark per `docs/guide.md` §1.3 (`Quarks.install("SuperDirt", "v1.7.2")` from the SC IDE).
+- [ ] Copy `src/supercollider/startup.scd` into the SC startup file location.
+- [ ] `npm install -g pnpm`.
+- [ ] `git clone https://github.com/tidalcycles/strudel.git ~/devel/strudel && cd ~/devel/strudel && git checkout 8a8ae9ac9659 && pnpm install`.
+- [ ] Re-run `make doctor` until all four rows show ✓.
+
+### Gap B — The skill is not installed in Claude Code
+
+`skill/SKILL.md` is a file in the repo. **It is not registered with the user's Claude Code installation.** Saying "produce a Dr. Who soundscape" in a Claude Code session today does not fire the `ambient-render` skill — it just gets a generic response.
+
+- [ ] Document the install path in `docs/skill-usage.md`: copy `skill/SKILL.md` into `~/.claude/skills/ambient-render/SKILL.md` (or equivalent per current Claude Code skill conventions).
+- [ ] Verify the description-triggering by running `claude` with a fresh session and asking for "background music for a video" — confirm the skill fires.
+- [ ] Add a `make install-skill` target that does the copy idempotently.
+
+### Gap C — Mood prompts don't actually shape the output
+
+Critical honesty: the `render` command takes `--mood "..."` but the renderer **does not use it to generate a Dr. Who-flavoured pattern**. The current flow is:
+
+```
+PatternSpec (defaults) → Jinja template (default.j2) → generic ambient .js
+```
+
+The `--mood` string is logged but not fed into pattern generation. Asking for "Dr. Who theme music" today produces the same WAV as asking for "underwater ambience" — a generic drone from the default template.
+
+To make mood prompts meaningful, exactly one of these has to land:
+
+- [ ] **Option 1 — LLM-authored Strudel**: add an `--llm` mode where the mood prompt is sent to a Claude API call that returns Strudel `.js` matching the SWED conventions (slow≥4, room≥0.7, orbit assigned). The validator already exists.
+- [ ] **Option 2 — Preset library**: ship hand-written `.js` patterns under `src/patterns/` keyed by mood family (drone, sci-fi, organic, sci-fi-theme-tune, etc.) and have `render` pick the nearest match. Add `dr-who-inspired.js` as the first concrete example.
+- [ ] **Option 3 — Parametric templates**: extend the Pydantic `PatternSpec` so mood maps to oscillator choice, filter sweep params, delay/feedback amounts. Templated, no LLM.
+
+Recommended: ship **Option 2** for M5 (it's deterministic and testable), then add Option 1 later.
+
+### Gap D — No reference Dr. Who pattern to render
+
+Even with Option 2 above, there's no `dr-who-inspired.js` file yet. The Dr. Who theme has very specific signature elements (sine-wave bassline that sweeps, theremin-like lead, no drums in the original Delia Derbyshire 1963 cut) that the current `example-drone.js` does not evoke.
+
+- [ ] Write `src/patterns/dr-who-inspired.js` per [CLAUDE.md](CLAUDE.md) conventions: `setcpm()` + `stack()`, every layer `.slow(≥4)`, `.room(≥0.7)`, orbits assigned. Capture the sweeping bass + spooky lead + reverb tail aesthetic.
+- [ ] Use it as the fixture for the M5 acceptance test.
+
+### Until P0.7 is closed
+
+The honest answer to *"can I get a Dr. Who WAV today?"* is **no**. After P0.6 + P0.7 are both closed, the answer becomes **yes, by running**:
+
+```bash
+strudel-gen render \
+  --pattern src/patterns/dr-who-inspired.js \
+  --duration 240 \
+  --out ~/Desktop/dr-who.wav
+```
+
+---
+
+
 
 ## Blocking decisions (resolved)
 

@@ -1,4 +1,4 @@
-.PHONY: setup clean test lint typecheck format doctor render render-pattern session
+.PHONY: setup clean test lint typecheck format doctor render render-pattern session dr-who
 
 # === Python ===
 VENV = .venv
@@ -27,7 +27,8 @@ test: $(VENV)/bin/activate
 	$(PYTEST) tests/ -v --tb=short --cov --cov-fail-under=85
 
 lint: $(VENV)/bin/activate
-	$(RUFF) check src/
+	$(RUFF) check src/ tests/
+	pre-commit run --all-files --show-diff-on-failure 2>/dev/null || true
 
 typecheck: $(VENV)/bin/activate
 	$(MYPY) src/
@@ -46,6 +47,12 @@ render-pattern: $(VENV)/bin/activate
 
 session: $(VENV)/bin/activate
 	$(PYTHON) -m strudel_gen.cli session $(ARGS)
+
+dr-who: $(VENV)/bin/activate
+	$(PYTHON) -m strudel_gen.cli render \
+	  --pattern src/supercollider/dr-who-render.scd \
+	  --duration 120 \
+	  --out ~/Desktop/dr-who-soundscape.wav
 
 # === Branch protection (admin needed) ===
 # Run once after initial CI green to lock main. Requires `gh` auth + admin access.

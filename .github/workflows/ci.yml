@@ -87,14 +87,16 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Install WSL Ubuntu
+      - name: Install WSL Ubuntu 22.04
         uses: Vampire/setup-wsl@v3
+        with:
+          distribution: Ubuntu-22.04
       - name: Install Python deps in WSL
         shell: wsl-bash {0}
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y python3 python3-pip
-          pip3 install -e ".[dev]"
+          sudo apt-get install -y python3 python3-pip python3-venv
+          pip3 install -e ".[dev]" --break-system-packages
       - name: Run unit tests in WSL
         shell: wsl-bash {0}
-        run: pytest tests/unit/ -v --tb=short -x
+        run: python3 -m pytest tests/unit/ -v --tb=short -x

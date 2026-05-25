@@ -122,7 +122,75 @@ class TestRenderCommand:
         assert result.exit_code == 1
         assert "sclang not found" in result.output
 
-    def test_render_records_and_normalizes(self, tmp_path: Path) -> None:
+    # --- Path A: self-contained .scd script ---
+
+    def test_render_scd_runs_sclang_directly(self, tmp_path: Path) -> None:
+        """scd render path: sclang called with positional args, no bridge/SCManager."""
+        scd_path = tmp_path / "pattern.scd"
+        scd_path.write_text("// sc script")
+        out_path = tmp_path / "out.wav"
+        out_path.write_bytes(b"RIFF" + b"\x00" * 32)
+
+        completed = subprocess.CompletedProcess(
+            args=["sclang", str(scd_path), str(out_path), "5"],
+            returncode=0,
+            stdout="Recording complete.",
+            stderr="",
+        )
+
+        with (
+            patch("strudel_gen.cli.detect", return_value=_detection()),
+            patch("strudel_gen.cli.normalize_to_dbfs", return_value=out_path),
+            patch("strudel_gen.cli.subprocess.run", return_value=completed) as mock_run,
+        ):
+            result = runner.invoke(
+                app,
+                ["render", "--pattern", str(scd_path), "--duration", "5", "--out", str(out_path)],
+            )
+
+        assert result.exit_code == 0
+        call_args = mock_run.call_args[0][0]
+        assert call_args[0] == "sclang"
+        assert call_args[1] == str(scd_path)
+        assert call_args[2] == str(out_path)
+        assert "Render complete" in result.output
+
+    def test_render_scd_missing_file_exits_one(self, tmp_path: Path) -> None:
+        scd_path = tmp_path / "missing.scd"
+        out_path = tmp_path / "out.wav"
+
+        with patch("strudel_gen.cli.detect", return_value=_detection()):
+            result = runner.invoke(
+                app,
+                ["render", "--pattern", str(scd_path), "--duration", "1", "--out", str(out_path)],
+            )
+
+        assert result.exit_code == 1
+        assert "not found" in result.output
+
+    def test_render_scd_nonzero_exit_propagates(self, tmp_path: Path) -> None:
+        scd_path = tmp_path / "bad.scd"
+        scd_path.write_text("// broken")
+        out_path = tmp_path / "out.wav"
+
+        completed = subprocess.CompletedProcess(
+            args=["sclang", str(scd_path)], returncode=1, stdout="", stderr="error"
+        )
+
+        with (
+            patch("strudel_gen.cli.detect", return_value=_detection()),
+            patch("strudel_gen.cli.subprocess.run", return_value=completed),
+        ):
+            result = runner.invoke(
+                app,
+                ["render", "--pattern", str(scd_path), "--duration", "1", "--out", str(out_path)],
+            )
+
+        assert result.exit_code == 1
+
+    # --- Path B: Strudel .js pattern via bridge ---
+
+    def test_render_js_records_and_normalizes(self, tmp_path: Path) -> None:
         out_path = tmp_path / "soundscape.wav"
         pattern_path = tmp_path / "pattern.js"
         pattern_path.write_text("setcpm(20)")
@@ -132,17 +200,14 @@ class TestRenderCommand:
         normalized_path = tmp_path / "normalized.wav"
 
         completed = subprocess.CompletedProcess(
-            args=["sclang", "-"],
-            returncode=0,
-            stdout="ok",
-            stderr="",
+            args=["sclang", "-"], returncode=0, stdout="ok", stderr=""
         )
 
         with (
             patch("strudel_gen.cli.detect", return_value=_detection()),
             patch("strudel_gen.cli.SCManager", return_value=mock_sc),
             patch("strudel_gen.cli.BridgeManager", return_value=mock_bridge),
-            patch("subprocess.run", return_value=completed) as mock_run,
+            patch("strudel_gen.cli.subprocess.run", return_value=completed) as mock_run,
             patch(
                 "strudel_gen.cli.normalize_to_dbfs", return_value=normalized_path
             ) as mock_normalize,
@@ -167,7 +232,7 @@ class TestRenderCommand:
         mock_sc.stop.assert_called_once()
         assert "Render complete" in result.output
 
-    def test_render_skips_normalize_when_disabled(self, tmp_path: Path) -> None:
+    def test_render_js_skips_normalize_when_disabled(self, tmp_path: Path) -> None:
         out_path = tmp_path / "soundscape.wav"
         out_path.write_bytes(b"RIFF" + b"\x00" * 32)
         mock_sc = MagicMock()
@@ -180,7 +245,7 @@ class TestRenderCommand:
             patch("strudel_gen.cli.detect", return_value=_detection()),
             patch("strudel_gen.cli.SCManager", return_value=mock_sc),
             patch("strudel_gen.cli.BridgeManager", return_value=mock_bridge),
-            patch("subprocess.run", return_value=completed),
+            patch("strudel_gen.cli.subprocess.run", return_value=completed),
             patch("strudel_gen.cli.normalize_to_dbfs") as mock_normalize,
         ):
             result = runner.invoke(
@@ -204,7 +269,7 @@ class TestRenderCommand:
             patch("strudel_gen.cli.detect", return_value=_detection()),
             patch("strudel_gen.cli.SCManager", return_value=mock_sc),
             patch("strudel_gen.cli.BridgeManager", return_value=mock_bridge),
-            patch("subprocess.run", return_value=completed),
+            patch("strudel_gen.cli.subprocess.run", return_value=completed),
             patch(
                 "strudel_gen.cli.normalize_to_dbfs",
                 side_effect=NormalizationError("ffmpeg missing"),

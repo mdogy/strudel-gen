@@ -1,6 +1,8 @@
 """Typer CLI entrypoint — `strudel-gen` command with subcommands."""
 
 import logging
+import subprocess
+import time as _time
 from pathlib import Path
 from typing import Annotated
 
@@ -17,10 +19,52 @@ from strudel_gen.sc import SCManager
 
 app = typer.Typer(
     name="strudel-gen",
-    help="Generative ambient soundscape pipeline: Strudel \u2192 SuperDirt \u2192 WAV",
+    help="Generative ambient soundscape pipeline: Strudel → SuperDirt → WAV",
 )
 console = Console()
 logger = logging.getLogger(__name__)
+
+# Pattern files shipped with the package
+_PATTERNS_DIR = Path(__file__).resolve().parent.parent / "patterns"
+_SC_DIR = Path(__file__).resolve().parent.parent / "supercollider"
+
+
+def _render_via_sc_script(
+    scd_path: Path,
+    out_path: Path,
+    duration: float,
+    timeout: float = 300.0,
+) -> int:
+    """Run a self-contained .scd script that boots, plays, records and exits.
+
+    The script receives output path and duration as positional argv, then
+    manages its own SC server lifecycle.
+
+    Args:
+        scd_path: Absolute path to the .scd render script.
+        out_path: Absolute path for the output WAV file.
+        duration: Recording duration in seconds.
+        timeout: Maximum seconds to wait before killing sclang.
+
+    Returns:
+        sclang exit code (0 = success).
+    """
+    cmd = ["sclang", str(scd_path), str(out_path), str(int(duration))]
+    logger.info("Running SC script: %s", " ".join(cmd))
+    result = subprocess.run(
+        cmd,
+        timeout=timeout,
+        text=True,
+        capture_output=True,
+    )
+    if result.stdout:
+        for line in result.stdout.splitlines():
+            logger.debug("[sclang] %s", line)
+    if result.stderr:
+        for line in result.stderr.splitlines():
+            logger.debug("[sclang stderr] %s", line)
+    logger.info("sclang exited with code %d", result.returncode)
+    return result.returncode
 
 
 @app.callback()
@@ -54,7 +98,7 @@ def doctor(
 
     all_ok = True
     for name, ok, path in components:
-        status = "\u2713" if ok else "\u2717"
+        status = "✓" if ok else "✗"
         if not ok:
             all_ok = False
         table.add_row(name, status, path)
@@ -70,7 +114,7 @@ def doctor(
             console.print(f"  [bold]{comp}:[/bold] {hint}")
 
     if all_ok:
-        console.print("\n[green]\u2713 All prerequisites found![/green]")
+        console.print("\n[green]✓ All prerequisites found![/green]")
         raise typer.Exit(0)
     else:
         console.print(
@@ -87,14 +131,14 @@ def render_pattern(
 ) -> None:
     """Render a PatternSpec JSON into a Strudel .js file."""
     from strudel_gen.patterns.model import PatternSpec
-    from strudel_gen.patterns.render import render_pattern
+    from strudel_gen.patterns.render import render_pattern as _render
 
     raw = spec.read_text()
     pattern_spec = PatternSpec.model_validate_json(raw)
-    rendered = render_pattern(pattern_spec)
+    rendered = _render(pattern_spec)
     out.write_text(rendered)
     logger.info("Rendered pattern to %s", out)
-    console.print(f"[green]\u2713[/green] Pattern written to {out}")
+    console.print(f"[green]✓[/green] Pattern written to {out}")
 
 
 @app.command()
@@ -131,10 +175,7 @@ def session(
 
     console.print(f"[green]Session active. Duration: {duration}s (dry_run={dry_run})[/green]")
 
-    # Let it run or record
     if dry_run:
-        import time as _time
-
         console.print(f"[dim]Waiting {duration}s...[/dim]")
         _time.sleep(duration)
 
@@ -146,16 +187,27 @@ def session(
 
 @app.command()
 def render(
-    _mood: Annotated[str, typer.Option("--mood", "-m", help="Mood description")] = "ambient drone",
+    mood: Annotated[
+        str, typer.Option("--mood", "-m", help="Mood description (used when no --pattern given)")
+    ] = "ambient drone",
     duration: Annotated[
         int, typer.Option("--duration", "-d", help="Recording duration in seconds")
-    ] = 30,
+    ] = 120,
     out: Annotated[Path, typer.Option("--out", "-o", help="Output WAV file path")] = Path(
         "soundscape.wav"
     ),
-    _cpm: Annotated[int, typer.Option("--cpm", help="Cycles per minute")] = 20,
+    cpm: Annotated[int, typer.Option("--cpm", help="Cycles per minute (Strudel path)")] = 20,
     pattern_file: Annotated[
-        Path | None, typer.Option("--pattern", "-p", help="Path to a Strudel .js pattern file")
+        Path | None,
+        typer.Option(
+            "--pattern",
+            "-p",
+            help=(
+                "Pattern file to render. "
+                ".scd = self-contained SC script (recommended for automation). "
+                ".js  = Strudel pattern; requires the Strudel REPL to be playing."
+            ),
+        ),
     ] = None,
     no_normalize: Annotated[
         bool, typer.Option("--no-normalize", help="Skip ffmpeg normalization")
@@ -165,75 +217,117 @@ def render(
         float, typer.Option("--timeout-bridge", help="Bridge boot timeout")
     ] = 15.0,
 ) -> None:
-    """Render a soundscape: boot services, record, normalize."""
-    # _mood and _cpm reserved for future PatternSpec generation
-    _ = (_mood, _cpm)
+    """Render a soundscape to WAV.
+
+    Two render paths:
+
+    \b
+    --pattern <file>.scd   Self-contained SuperCollider script.
+                           Boots SC, plays the pattern, records, and exits.
+                           Does NOT need pnpm / Strudel.
+                           Example:
+                             strudel-gen render \\
+                               --pattern src/supercollider/dr-who-render.scd \\
+                               --duration 120 --out drwho.wav
+
+    \b
+    --pattern <file>.js    Strudel pattern (for when you have the Strudel REPL
+                           already playing). Boots SC + OSC bridge, then
+                           records whatever SuperDirt is producing.
+                           NOTE: you must manually paste and play the .js file
+                           in the Strudel browser before running this command.
+    """
+    _ = (mood, cpm)  # reserved for future LLM/preset pattern selection
+
     det = detect()
     if not det.sclang:
-        console.print("[red]sclang not found. Run `strudel-gen doctor` for hints.[/red]")
+        console.print("[red]sclang not found. Run `strudel-gen doctor --verbose`.[/red]")
         raise typer.Exit(1)
 
-    # Resolve output path
     out_path = out.expanduser().resolve()
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
-    console.print("[bold]Booting SuperCollider...[/bold]")
-    sc_mgr = SCManager(timeout=timeout_sc)
-    sc_mgr.start()
+    # ------------------------------------------------------------------
+    # Path A — self-contained .scd script (preferred for automation)
+    # ------------------------------------------------------------------
+    if pattern_file and str(pattern_file).endswith(".scd"):
+        scd_path = pattern_file.expanduser().resolve()
+        if not scd_path.exists():
+            console.print(f"[red]Pattern file not found: {scd_path}[/red]")
+            raise typer.Exit(1)
 
-    console.print("[bold]Starting OSC bridge...[/bold]")
-    bridge_mgr = BridgeManager(timeout=timeout_bridge)
-    bridge_mgr.start()
+        console.print(f"[bold]Rendering via SC script:[/bold] {scd_path.name}")
+        console.print(f"[dim]Output → {out_path}  |  Duration: {duration}s[/dim]")
 
-    try:
+        timeout = float(duration) + timeout_sc + 15.0
+        rc = _render_via_sc_script(scd_path, out_path, float(duration), timeout=timeout)
+
+        if rc != 0:
+            console.print(f"[red]sclang exited with code {rc}. Check logs for details.[/red]")
+            raise typer.Exit(rc)
+
+    # ------------------------------------------------------------------
+    # Path B — Strudel .js pattern (needs running REPL + bridge)
+    # ------------------------------------------------------------------
+    else:
         if pattern_file:
-            pattern_path = pattern_file.expanduser().resolve()
-            if pattern_path.exists():
-                console.print(f"Pattern file: {pattern_path}")
-                logger.info("Using pattern file: %s", pattern_path)
-            else:
-                logger.warning("Pattern file not found: %s", pattern_path)
-
-        console.print("[bold]Triggering recording...[/bold]")
-        rec = RecorderScript(
-            output_path=out_path,
-            duration=float(duration),
-        )
-        script = rec.generate()
-        logger.debug("Recording script:\n%s", script)
-
-        import subprocess
-
-        record_result = subprocess.run(
-            ["sclang", "-"],
-            input=script,
-            capture_output=True,
-            text=True,
-            timeout=duration + 30,
-        )
-        logger.info("sclang recording exited with code %d", record_result.returncode)
-        if record_result.stderr:
-            logger.debug("sclang stderr: %s", record_result.stderr[:500])
-
-        if out_path.exists():
-            file_size = out_path.stat().st_size
-            console.print(f"[green]Recorded {out_path} ({file_size / 1024:.1f} KB)[/green]")
-
-            if not no_normalize:
-                try:
-                    console.print("[dim]Normalizing to -6 dBFS...[/dim]")
-                    normalized = normalize_to_dbfs(out_path, target=-6.0)
-                    console.print(f"[green]Normalized: {normalized}[/green]")
-                except Exception as exc:
-                    logger.warning("Normalization skipped: %s", exc)
-                    console.print(f"[yellow]Normalization warning: {exc}[/yellow]")
+            console.print(f"[bold]Pattern:[/bold] {pattern_file}")
+            console.print(
+                "[yellow]NOTE: paste and play this file in the Strudel REPL "
+                "before continuing.[/yellow]"
+            )
         else:
-            console.print("[red]Output file not found — recording may have failed.[/red]")
+            console.print(
+                "[yellow]No --pattern given. Recording whatever SuperDirt produces.[/yellow]"
+            )
 
-    finally:
-        console.print("[bold]Shutting down...[/bold]")
-        bridge_mgr.stop()
-        sc_mgr.stop()
+        console.print("[bold]Booting SuperCollider...[/bold]")
+        sc_mgr = SCManager(timeout=timeout_sc)
+        sc_mgr.start()
+
+        console.print("[bold]Starting OSC bridge...[/bold]")
+        bridge_mgr = BridgeManager(timeout=timeout_bridge)
+        bridge_mgr.start()
+
+        try:
+            rec = RecorderScript(output_path=out_path, duration=float(duration))
+            script = rec.generate()
+            logger.debug("Recording script:\n%s", script)
+
+            console.print("[bold]Triggering recording...[/bold]")
+            result = subprocess.run(
+                ["sclang", "-"],
+                input=script,
+                capture_output=True,
+                text=True,
+                timeout=duration + 30,
+            )
+            logger.info("sclang recording exited with code %d", result.returncode)
+            if result.stderr:
+                logger.debug("sclang stderr: %s", result.stderr[:500])
+        finally:
+            console.print("[bold]Shutting down...[/bold]")
+            bridge_mgr.stop()
+            sc_mgr.stop()
+
+    # ------------------------------------------------------------------
+    # Post-processing (both paths)
+    # ------------------------------------------------------------------
+    if out_path.exists():
+        file_size = out_path.stat().st_size
+        console.print(f"[green]Recorded {out_path} ({file_size / 1024:.1f} KB)[/green]")
+
+        if not no_normalize:
+            try:
+                console.print("[dim]Normalizing to -6 dBFS...[/dim]")
+                normalized = normalize_to_dbfs(out_path, target=-6.0)
+                console.print(f"[green]Normalized: {normalized}[/green]")
+            except Exception as exc:
+                logger.warning("Normalization skipped: %s", exc)
+                console.print(f"[yellow]Normalization warning: {exc}[/yellow]")
+    else:
+        console.print("[red]Output file not found — recording may have failed.[/red]")
+        raise typer.Exit(1)
 
     console.print("[green]Render complete.[/green]")
 
