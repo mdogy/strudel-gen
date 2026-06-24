@@ -6,6 +6,13 @@ dist/
 build/
 *.egg-info/
 
+# Haskell / Stack
+.stack-work/
+*.hi
+*.o
+*.dyn_hi
+*.dyn_o
+
 # Audio output
 *.wav
 *.aiff
