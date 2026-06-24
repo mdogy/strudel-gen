@@ -1,12 +1,13 @@
 """Tests for cli.py — Typer command coverage."""
 
+import json
 import subprocess
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from typer.testing import CliRunner
 
-from strudel_gen.cli import app
+from strudel_gen.cli import app, _write_render_sidecar
 from strudel_gen.detect import DetectionResult
 from strudel_gen.normalize import NormalizationError
 
@@ -156,6 +157,114 @@ class TestRenderCommand:
         assert call_args[2] == str(out_path)
         assert "Render complete" in result.output
 
+    # --- Path A: Tidal .tidal pattern ---
+
+    def test_render_tidal_requires_pattern(self) -> None:
+        with patch("strudel_gen.cli.detect", return_value=_detection()):
+            result = runner.invoke(
+                app,
+                ["render", "--engine", "tidal", "--duration", "5"],
+            )
+
+        assert result.exit_code == 1
+        assert "required for" in result.output
+
+    def test_render_tidal_missing_file_exits_one(self, tmp_path: Path) -> None:
+        tidal_path = tmp_path / "missing.tidal"
+        out_path = tmp_path / "out.wav"
+
+        with patch("strudel_gen.cli.detect", return_value=_detection()):
+            result = runner.invoke(
+                app,
+                [
+                    "render",
+                    "--engine", "tidal",
+                    "--pattern", str(tidal_path),
+                    "--duration", "1",
+                    "--out", str(out_path),
+                ],
+            )
+
+        assert result.exit_code == 1
+        assert "required for" in result.output
+
+    def test_render_tidal_calls_orchestrator(self, tmp_path: Path) -> None:
+        tidal_path = tmp_path / "pattern.tidal"
+        tidal_path.write_text("d1 $ sound \"bd\"")
+        out_path = tmp_path / "out.wav"
+
+        with (
+            patch("strudel_gen.cli.detect", return_value=_detection()),
+            patch("strudel_gen.cli.render_tidal") as mock_render,
+        ):
+            result = runner.invoke(
+                app,
+                [
+                    "render",
+                    "--engine", "tidal",
+                    "--pattern", str(tidal_path),
+                    "--duration", "5",
+                    "--out", str(out_path),
+                ],
+            )
+
+        assert result.exit_code == 0
+        mock_render.assert_called_once_with(
+            pattern_path=tidal_path,
+            out_path=out_path,
+            duration=5.0,
+            no_normalize=False,
+        )
+
+    def test_render_tidal_infers_engine_from_extension(self, tmp_path: Path) -> None:
+        """When --engine is 'auto', .tidal extension selects tidal engine."""
+        tidal_path = tmp_path / "pattern.tidal"
+        tidal_path.write_text("d1 $ sound \"bd\"")
+        out_path = tmp_path / "out.wav"
+
+        with (
+            patch("strudel_gen.cli.detect", return_value=_detection()),
+            patch("strudel_gen.cli.render_tidal") as mock_render,
+        ):
+            result = runner.invoke(
+                app,
+                [
+                    "render",
+                    "--pattern", str(tidal_path),
+                    "--duration", "5",
+                    "--out", str(out_path),
+                ],
+            )
+
+        assert result.exit_code == 0
+        mock_render.assert_called_once()
+
+    def test_render_tidal_failure_reported(self, tmp_path: Path) -> None:
+        tidal_path = tmp_path / "pattern.tidal"
+        tidal_path.write_text("d1 $ sound \"bd\"")
+        out_path = tmp_path / "out.wav"
+
+        with (
+            patch("strudel_gen.cli.detect", return_value=_detection()),
+            patch(
+                "strudel_gen.cli.render_tidal",
+                side_effect=RuntimeError("SuperDirt did not become ready"),
+            ),
+        ):
+            result = runner.invoke(
+                app,
+                [
+                    "render",
+                    "--engine", "tidal",
+                    "--pattern", str(tidal_path),
+                    "--duration", "5",
+                    "--out", str(out_path),
+                ],
+            )
+
+        assert result.exit_code == 1
+        assert "Render failed" in result.output
+
     def test_render_scd_missing_file_exits_one(self, tmp_path: Path) -> None:
         scd_path = tmp_path / "missing.scd"
         out_path = tmp_path / "out.wav"
@@ -167,7 +276,38 @@ class TestRenderCommand:
             )
 
         assert result.exit_code == 1
-        assert "not found" in result.output
+        assert "required for" in result.output
+
+    def test_render_scd_via_explicit_engine(self, tmp_path: Path) -> None:  
+        scd_path = tmp_path / "any.ext"
+        scd_path.write_text("// sc script")
+        out_path = tmp_path / "out.wav"
+        out_path.write_bytes(b"RIFF" + b"\x00" * 32)
+
+        completed = subprocess.CompletedProcess(
+            args=["sclang", str(scd_path), str(out_path), "5"],
+            returncode=0, stdout="", stderr="",
+        )
+
+        with (
+            patch("strudel_gen.cli.detect", return_value=_detection()),
+            patch("strudel_gen.cli.normalize_to_dbfs", return_value=out_path),
+            patch("strudel_gen.cli.subprocess.run", return_value=completed) as mock_run,
+        ):
+            result = runner.invoke(
+                app,
+                [
+                    "render",
+                    "--engine", "sc-native",
+                    "--pattern", str(scd_path),
+                    "--duration", "5",
+                    "--out", str(out_path),
+                ],
+            )
+
+        assert result.exit_code == 0
+        call_args = mock_run.call_args[0][0]
+        assert call_args[1] == str(scd_path)
 
     def test_render_scd_nonzero_exit_propagates(self, tmp_path: Path) -> None:
         scd_path = tmp_path / "bad.scd"
@@ -256,6 +396,139 @@ class TestRenderCommand:
 
         assert result.exit_code == 0
         mock_normalize.assert_not_called()
+
+    # --- MP3 + sidecar ---
+
+    def test_render_scd_writes_sidecar(self, tmp_path: Path) -> None:
+        scd_path = tmp_path / "pattern.scd"
+        scd_path.write_text("// sc script")
+        out_path = tmp_path / "out.wav"
+        out_path.write_bytes(b"RIFF" + b"\x00" * 32)
+
+        completed = subprocess.CompletedProcess(
+            args=["sclang"], returncode=0, stdout="", stderr=""
+        )
+
+        with (
+            patch("strudel_gen.cli.detect", return_value=_detection()),
+            patch("strudel_gen.cli.normalize_to_dbfs", return_value=out_path),
+            patch("strudel_gen.cli.subprocess.run", return_value=completed),
+        ):
+            result = runner.invoke(
+                app,
+                ["render", "--pattern", str(scd_path), "--duration", "5", "--out", str(out_path)],
+            )
+
+        assert result.exit_code == 0
+        sidecar = out_path.with_suffix(".json")
+        assert sidecar.exists()
+        data = json.loads(sidecar.read_text())
+        assert data["engine"] == "sc-native"
+        assert data["duration_s"] == 5
+        assert data["mp3"] is None
+        assert data["normalized"] is True
+        assert "rendered_at" in data
+
+    def test_render_scd_encodes_mp3(self, tmp_path: Path) -> None:
+        scd_path = tmp_path / "pattern.scd"
+        scd_path.write_text("// sc script")
+        out_path = tmp_path / "out.wav"
+        out_path.write_bytes(b"RIFF" + b"\x00" * 32)
+        mp3_path = tmp_path / "out.mp3"
+
+        completed = subprocess.CompletedProcess(
+            args=["sclang"], returncode=0, stdout="", stderr=""
+        )
+
+        with (
+            patch("strudel_gen.cli.detect", return_value=_detection()),
+            patch("strudel_gen.cli.normalize_to_dbfs", return_value=out_path),
+            patch("strudel_gen.cli.subprocess.run", return_value=completed),
+            patch("strudel_gen.cli.to_mp3", return_value=mp3_path) as mock_mp3,
+        ):
+            result = runner.invoke(
+                app,
+                [
+                    "render",
+                    "--pattern", str(scd_path),
+                    "--duration", "5",
+                    "--out", str(out_path),
+                    "--mp3", "320",
+                ],
+            )
+
+        assert result.exit_code == 0
+        mock_mp3.assert_called_once_with(out_path, 320)
+        sidecar = out_path.with_suffix(".json")
+        data = json.loads(sidecar.read_text())
+        assert data["mp3"] == str(mp3_path)
+
+    def test_render_mp3_warning_on_failure(self, tmp_path: Path) -> None:
+        scd_path = tmp_path / "pattern.scd"
+        scd_path.write_text("// sc script")
+        out_path = tmp_path / "out.wav"
+        out_path.write_bytes(b"RIFF" + b"\x00" * 32)
+
+        completed = subprocess.CompletedProcess(
+            args=["sclang"], returncode=0, stdout="", stderr=""
+        )
+
+        with (
+            patch("strudel_gen.cli.detect", return_value=_detection()),
+            patch("strudel_gen.cli.normalize_to_dbfs", return_value=out_path),
+            patch("strudel_gen.cli.subprocess.run", return_value=completed),
+            patch("strudel_gen.cli.to_mp3", side_effect=Exception("codec missing")),
+        ):
+            result = runner.invoke(
+                app,
+                [
+                    "render",
+                    "--pattern", str(scd_path),
+                    "--duration", "5",
+                    "--out", str(out_path),
+                    "--mp3", "320",
+                ],
+            )
+
+        assert result.exit_code == 0
+        assert "MP3 warning" in result.output
+
+
+class TestWriteRenderSidecar:
+    def test_writes_expected_fields(self, tmp_path: Path) -> None:
+        out_path = tmp_path / "out.wav"
+        sidecar = _write_render_sidecar(
+            out_path=out_path,
+            pattern_file=Path("src/patterns/cold.js"),
+            engine="tidal",
+            duration=120,
+            normalized=True,
+            mp3_path=tmp_path / "out.mp3",
+        )
+
+        assert sidecar == out_path.with_suffix(".json")
+        data = json.loads(sidecar.read_text())
+        assert data["engine"] == "tidal"
+        assert data["duration_s"] == 120
+        assert data["normalized"] is True
+        assert data["target_dbfs"] == -6.0
+        assert data["mp3"] is not None
+        assert "rendered_at" in data
+
+    def test_mp3_none_when_not_produced(self, tmp_path: Path) -> None:
+        sidecar = _write_render_sidecar(
+            out_path=tmp_path / "out.wav",
+            pattern_file=None,
+            engine="sc-native",
+            duration=30,
+            normalized=False,
+        )
+        data = json.loads(sidecar.read_text())
+        assert data["mp3"] is None
+        assert data["normalized"] is False
+        assert data["target_dbfs"] is None
+        assert data["pattern"] is None
+
 
     def test_render_reports_normalization_warning(self, tmp_path: Path) -> None:
         out_path = tmp_path / "soundscape.wav"

@@ -16,7 +16,7 @@ make doctor
 make render ARGS="--mood 'calm meditation drone, soft pads, slow evolving' --duration 180 --out ~/Desktop/meditation-drone.wav"
 ```
 
-**Output:** `~/Desktop/meditation-drone.wav` (24-bit, normalized to −6 dBFS)  
+**Output:** `~/Desktop/meditation-drone.wav` (24-bit, normalized to −6 dBFS)
 **Sidecar:** `~/Desktop/meditation-drone.loudness.json`
 
 ---

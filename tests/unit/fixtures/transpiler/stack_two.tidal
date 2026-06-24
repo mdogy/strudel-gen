@@ -1,0 +1,4 @@
+setcps (40/60/4)
+
+d1 $ note "c2 g2" # s "sawtooth" # room 0.9 # slow 4
+d2 $ note "c5 ~ g4" # s "sine" # room 0.85 # slow 6

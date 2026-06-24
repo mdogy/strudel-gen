@@ -1,65 +1,114 @@
 // Dr. Who Inspired Ambient Soundscape — self-contained render script.
 //
-// Usage (from terminal):
-//   sclang dr-who-render.scd [output_path] [duration_seconds]
+// Usage: sclang dr-who-render.scd [output_path] [duration_seconds]
+// Defaults: /tmp/dr-who-soundscape.wav, 120 s
 //
-// Defaults: output = /tmp/dr-who-soundscape.wav, duration = 120 s
-//
-// What it does:
-//   1. Boots scsynth with resources for generative audio
-//   2. Defines three SynthDefs (bass, theremin lead, eerie texture)
-//   3. Plays the Dr. Who-inspired pattern via SC Routines
-//   4. Records to WAV (24-bit, 48 kHz, stereo)
-//   5. Exits cleanly after recording finishes
+// Sound design v5:
+//   - No noise-based percussion (was causing static)
+//   - Soft sine kick + sine "ping" accent replace hat/snare
+//   - Melody uses proper phrases with variations (A A B A C A B)
+//     so you hear a recognisable Dr. Who hook that returns and develops
+//   - All gate=0 sent explicitly so notes don't hold forever
+//   - All var declarations at TOP of each block (SC 3.x requirement)
 
 (
-var outPath = if(thisProcess.argv.size > 0,
-    { thisProcess.argv[0] },
-    { "/tmp/dr-who-soundscape.wav" }
-);
+var outPath  = if(thisProcess.argv.size > 0,
+    { thisProcess.argv[0] }, { "/tmp/dr-who-soundscape.wav" });
 var duration = if(thisProcess.argv.size > 1,
-    { thisProcess.argv[1].asFloat },
-    { 120.0 }
-);
+    { thisProcess.argv[1].asFloat }, { 120.0 });
 
-s.options.numBuffers      = 1024 * 64;
-s.options.memSize         = 8192 * 16;
-s.options.numOutputBusChannels = 2;
-s.options.numInputBusChannels  = 2;
-s.options.sampleRate      = 48000;
+s.options.sampleRate           = 48000;
+s.options.numInputBusChannels  = 0;   // don't record input — avoids bleed
 
 s.waitForBoot {
 
-    // --- SynthDefs ---
+    // ------------------------------------------------------------------ //
+    // ALL VAR DECLARATIONS FIRST
+    // ------------------------------------------------------------------ //
+    var bpm       = 78;                          // relaxed sci-fi pace
+    var clock     = TempoClock(bpm / 60.0);
 
-    // Sweeping sawtooth bass (the iconic "woo" pulse)
-    SynthDef(\dwBass, { |out = 0, freq = 82.4, amp = 0.38, gate = 1|
-        var osc  = Mix([Saw.ar(freq) * 0.45,
-                        Saw.ar(freq * 0.998) * 0.3,
-                        SinOsc.ar(freq) * 0.25]);
-        var env  = EnvGen.kr(Env.adsr(0.06, 0.4, 0.72, 5.0), gate, doneAction: 2);
-        var filt = RLPF.ar(osc, LFNoise1.kr(0.18).exprange(180, 560), 0.35);
-        var rev  = FreeVerb.ar(filt * env, 0.82, 0.91, 0.4);
-        Out.ar(out, (filt * env * 0.28 + rev * 0.72).dup * amp);
+    // E natural minor (E4 F#4 G4 A4 B4 C5 D5 E5)
+    var scale     = [329.63, 370.00, 392.00, 440.00, 493.88, 523.25, 587.33, 659.25];
+
+    // Bass figure: E1 D1 E1 D1 E1 D1 C1 D1
+    var bassNotes = [82.4, 73.4, 82.4, 73.4, 82.4, 73.4, 65.4, 73.4];
+
+    // Pad roots: E3 G3 B3 E3
+    var padFreqs  = [164.8, 196.0, 246.9, 164.8];
+
+    // Kick pattern (16 steps, 16th notes): beats 1 and 3 only
+    var kickPat   = [1,0,0,0, 0,0,0,0, 1,0,0,0, 0,0,0,0];
+
+    // Ping accent on the "and" of 2 — like the syncopated Dr. Who pulse
+    var pingPat   = [0,0,0,0, 0,0,1,0, 0,0,0,0, 0,0,1,0];
+
+    // ---- Melody phrases (scale degrees, E natural minor) ----
+    // Phrase A: main Dr. Who hook  B  D  E  D  B  G  A  B
+    var phraseA   = [4, 6, 7, 6, 4, 2, 3, 4];
+    // Phrase B: upper variation    E  D  E  D  B  D  E  B
+    var phraseB   = [7, 6, 7, 6, 4, 6, 7, 4];
+    // Phrase C: lower/sparse       E  G  B  A  E  G  B
+    var phraseC   = [0, 2, 4, 3, 0, 2, 4];
+    // Phrase D: condensed hook (first 5 notes only, then rest)
+    var phraseD   = [4, 6, 7, 6, 4];
+
+    // Sequence of phrases: A A B A C A B D A ...
+    var phrases   = [phraseA, phraseA, phraseB, phraseA,
+                     phraseC, phraseA, phraseB, phraseD, phraseA];
+
+    // Note rhythm pattern (in beats): short-short-long feel
+    var noteDurs  = [1, 1, 2, 1, 2, 1, 1, 3];
+
+    // Gaps between phrases (in beats): max 4 so silence never exceeds ~3 s
+    var gaps      = [2, 4, 2, 4, 2, 4, 2, 4];
+
+    // Routine handles + shared reference to the currently-playing lead synth
+    var drumRout, bassRout, padRout, melRout;
+    var currentLead = nil;   // set by melRout, cleared on release
+
+    // ------------------------------------------------------------------ //
+    // SYNTHDEFS
+    // ------------------------------------------------------------------ //
+
+    // Sine kick: pure frequency drop, no noise
+    SynthDef(\kick, { |out = 0, amp = 0.5|
+        var freq = EnvGen.kr(Env([160, 48], [0.1], \exp));
+        var sig  = SinOsc.ar(freq) * EnvGen.ar(Env.perc(0.005, 0.32, 1, -4), doneAction: 2);
+        Out.ar(out, (sig * amp).dup);
     }).add;
 
-    // Sine-wave theremin lead (the melodic line)
-    SynthDef(\dwLead, { |out = 0, freq = 493.9, amp = 0.22, gate = 1|
-        var vib = SinOsc.kr(4.8, 0, freq * 0.011);
-        var osc = SinOsc.ar(freq + vib);
-        var env = EnvGen.kr(Env.adsr(1.4, 0.6, 0.82, 7.0), gate, doneAction: 2);
-        var del = CombC.ar(osc * env, 0.75, 0.333, 4.5, 0.38);
-        var rev = FreeVerb.ar(osc * env + del, 0.88, 0.95, 0.28);
-        Out.ar(out, rev.dup * amp);
+    // Sine "ping": short, bright sine blip — replaces noisy hi-hat
+    SynthDef(\ping, { |out = 0, freq = 880, amp = 0.12|
+        var sig = SinOsc.ar(freq)
+                * EnvGen.ar(Env.perc(0.002, 0.08, 1, -8), doneAction: 2);
+        Out.ar(out, (sig * amp).dup);
     }).add;
 
-    // Spectral texture chord (the eerie, alien "shimmer")
-    SynthDef(\dwTexture, { |out = 0, freq = 329.6, amp = 0.16, gate = 1|
-        var osc = SinOsc.ar(freq * [1, 1.5, 2, 3]) * [0.42, 0.3, 0.18, 0.1];
-        var env = EnvGen.kr(Env.adsr(3.2, 2.0, 0.6, 12.0), gate, doneAction: 2);
-        var mix = Mix(osc) * env;
-        var rev = FreeVerb.ar(mix, 0.91, 0.96, 0.25);
-        Out.ar(out, rev.dup * amp);
+    // Bass: pure sine + 2nd harmonic, gentle LFO wobble
+    SynthDef(\dwBass, { |out = 0, freq = 82.4, amp = 0.48, gate = 1|
+        var wobble = SinOsc.kr(0.13, 0, freq * 0.006);
+        var osc    = SinOsc.ar(freq + wobble)
+                   + (SinOsc.ar((freq * 2) + wobble) * 0.11);
+        var env    = EnvGen.kr(Env.adsr(0.06, 0.28, 0.82, 3.5), gate, doneAction: 2);
+        Out.ar(out, FreeVerb.ar(osc * env, 0.62, 0.88, 0.3).dup * amp);
+    }).add;
+
+    // Theremin lead: pure sine + vibrato.
+    // Uses gate=1 input so we can release with synth.set(\gate, 0).
+    SynthDef(\dwLead, { |out = 0, freq = 493.9, amp = 0.32, gate = 1|
+        var vib  = SinOsc.kr(4.0, 0, freq * 0.009);
+        var osc  = SinOsc.ar(freq + vib);
+        var env  = EnvGen.kr(Env.adsr(0.25, 0.2, 0.88, 4.5), gate, doneAction: 2);
+        var echo = DelayC.ar(osc * env, 1.0, 60.0 / bpm * 0.5) * 0.22;
+        Out.ar(out, FreeVerb.ar((osc * env) + echo, 0.86, 0.93, 0.2).dup * amp);
+    }).add;
+
+    // Chord pad: E-minor sine triad, slow attack
+    SynthDef(\dwPad, { |out = 0, freq = 164.8, amp = 0.13, gate = 1|
+        var env  = EnvGen.kr(Env.adsr(3.2, 2.0, 0.65, 11.0), gate, doneAction: 2);
+        var oscs = SinOsc.ar(freq * [1.0, 1.189, 1.498, 2.0]) * [0.4, 0.27, 0.2, 0.13];
+        Out.ar(out, FreeVerb.ar(Mix(oscs) * env, 0.91, 0.96, 0.2).dup * amp);
     }).add;
 
     s.sync;
@@ -67,47 +116,102 @@ s.waitForBoot {
     s.recHeaderFormat = "WAV";
     s.recSampleFormat = "int24";
 
-    Routine({
+    // ------------------------------------------------------------------ //
+    // ROUTINES
+    // ------------------------------------------------------------------ //
 
-        // Dr. Who — E minor
-        // Bass figure:  E1  D1  E1  D1  E1  D1  C1  D1
-        var bassFreqs = #[82.4, 73.4, 82.4, 73.4, 82.4, 73.4, 65.4, 73.4];
-        // Lead melody:  B4    D5    E5    D5    B4    E4    G4    A4
-        var leadFreqs = #[493.9, 587.3, 659.3, 587.3, 493.9, 329.6, 392.0, 440.0];
-        // Texture root: E3    G3    B3    E4
-        var texFreqs  = #[164.8, 196.0, 246.9, 329.6];
-
-        var beatDur = 1.8;   // seconds per bass step — slow, glacial
-        var steps   = (duration / beatDur).asInteger;
-
-        // Let SynthDefs register
-        1.0.wait;
-
-        // Start recording
-        s.record(path: outPath.standardizePath, duration: duration + 5);
-        ("Recording to: " ++ outPath).postln;
-        0.6.wait;
-
-        steps.do { |i|
-            Synth(\dwBass, [\freq, bassFreqs[i % 8], \amp, 0.38]);
-
-            if ((i % 2) == 0) {
-                Synth(\dwLead, [\freq, leadFreqs[i % 8], \amp, 0.22]);
-            };
-
-            if ((i % 4) == 0) {
-                Synth(\dwTexture, [\freq, texFreqs[i % 4], \amp, 0.16]);
-            };
-
-            beatDur.wait;
+    // --- Drums: kick + ping, no noise ---
+    drumRout = Routine({
+        var i = 0;
+        loop {
+            var j = i % 16;
+            if (kickPat[j] == 1) { Synth(\kick, [\amp, 0.48]) };
+            if (pingPat[j] == 1) { Synth(\ping, [\freq, 1200, \amp, 0.09]) };
+            0.25.wait;   // 16th note
+            i = i + 1;
         };
+    }).play(clock);
 
-        // Tail — let reverb decay
+    // --- Bass ---
+    bassRout = Routine({
+        var i = 0;
+        loop {
+            Synth(\dwBass, [\freq, bassNotes[i % 8], \amp, 0.44]);
+            2.0.wait;
+            i = i + 1;
+        };
+    }).play(clock);
+
+    // --- Pad ---
+    padRout = Routine({
+        var i    = 0;
+        var prev = nil;
+        loop {
+            if (prev.notNil) { prev.release(2.0) };
+            prev = Synth(\dwPad, [\freq, padFreqs[i % 4], \amp, 0.12]);
+            8.0.wait;
+            i = i + 1;
+        };
+    }).play(clock);
+
+    // --- Melody: phrase-based with variations ---
+    // Each phrase plays through fully, then rests before the next phrase.
+    // The sequence (phraseA, phraseA, phraseB, …) gives the "motive + return"
+    // structure the listener can follow.
+    melRout = Routine({
+        var pIdx = 0;
+        loop {
+            var phrase  = phrases[pIdx % phrases.size];
+            var gap     = gaps[pIdx % gaps.size];
+            var noteIdx = 0;
+
+            // Play every note in the phrase with explicit gate release
+            phrase.do { |deg|
+                var dur   = noteDurs[noteIdx % noteDurs.size];
+                var hold  = (dur - 0.18).max(0.1);
+                currentLead = Synth(\dwLead, [\freq, scale[deg], \amp, 0.30]);
+                hold.wait;
+                currentLead.set(\gate, 0);
+                currentLead = nil;
+                0.18.wait;
+                noteIdx = noteIdx + 1;
+            };
+
+            gap.wait;                   // breath between phrases
+            pIdx = pIdx + 1;
+        };
+    }).play(clock);
+
+    // ------------------------------------------------------------------ //
+    // RECORDING CONTROLLER (AppClock — waits are real seconds)
+    // ------------------------------------------------------------------ //
+    Routine({
+        1.0.wait;
+        s.record(path: outPath.standardizePath, duration: duration + 14);
+        ("Recording to: " ++ outPath).postln;
+
+        // Stop drums/bass/pad at the nominal end — they've done their job.
+        // Keep melody running 5 s into the reverb tail so there's no
+        // silent gap before fade-out.
+        duration.wait;
+        drumRout.stop;
+        bassRout.stop;
+        padRout.stop;
+
+        // Melody continues 5 more seconds, then releases cleanly
         5.0.wait;
+        if (currentLead.notNil) {
+            currentLead.set(\gate, 0);
+            currentLead = nil;
+        };
+        melRout.stop;
+        clock.stop;
+
+        // Reverb tail
+        3.0.wait;
         "Recording complete.".postln;
         1.0.wait;
         0.exit;
-
     }).play;
 };
 )

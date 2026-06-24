@@ -1,64 +1,48 @@
 ---
 name: ambient-render
-description: >-
-  Generate ambient background music, soundscape audio, or atmospheric drone audio
-  for videos, games, or meditation. Triggers when user asks for background music,
-  ambient audio, a soundscape, atmospheric drone, or environmental audio.
-Allowed-Tools: Bash
+description: |
+  Use this skill when the user asks for ambient background music,
+  a soundscape for a video, generative drone audio, or a sci-fi /
+  underwater / forest / etc. audio bed. Produces a rendered WAV file
+  on the user's machine. Triggers on phrases like
+  "background music for", "ambient soundscape", "drone audio",
+  "make a soundtrack", "underwater ambience", "forest atmosphere",
+  "space drone", "make me something dark and cinematic".
+  Do NOT use for vocal music, songs with lyrics, pop tracks, beat-driven
+  EDM, or any request that names a copyrighted artist or requests a
+  specific song/theme from an existing work.
+allowed-tools: Bash
 ---
 
 # ambient-render
 
-Generate ambient soundscape WAV files via **Strudel** (JS patterns) → **SuperDirt** (SuperCollider audio engine) → **Recorder**.
+You are about to produce a rendered ambient soundscape WAV file by writing
+a short Strudel `.js` pattern and running the project's render pipeline.
 
-## When this skill fires
+## Inputs you need (ask if missing)
 
-The description above is the trigger. It fires when a user asks for:
+- **Mood description**: 1-2 sentences ("cold underwater", "alien forest at dawn").
+- **Duration**: seconds. Default 120 if unspecified.
+- **Output path**: default `~/Desktop/<mood-slug>.wav`.
 
-- "background music for a video"
-- "ambient soundscape"
-- "atmospheric drone audio"
-- "soundtrack for a [mood] scene"
-- "environmental audio for a game"
+## Steps
 
-## Requirements
+1. Generate a slug from the mood (kebab-case, ≤ 32 chars). Call it `<slug>`.
+2. Write a Strudel `.js` file to `src/patterns/<slug>.js` following the
+   conventions in CLAUDE.md and the templates in docs/redesign-tidal.md §6.
+3. Run:
 
-- SuperCollider (with sc3-plugins + SuperDirt)
-- Node.js + pnpm
-- A local Strudel clone (pinned to `8a8ae9ac9659`)
-- ffmpeg (optional, for normalization)
+       strudel-gen render \
+         --engine tidal \
+         --pattern src/patterns/<slug>.js \
+         --duration <seconds> \
+         --out <output_path>
 
-## Usage
+4. Report the output paths back to the user.
 
-```bash
-# Check prerequisites
-cd /path/to/strudel-gen && make doctor
+## Constraints (binding)
 
-# Full render: boot SC, start bridge, record, normalize
-make render ARGS="--mood 'cold underwater drone' --duration 240 --out ~/Desktop/soundscape.wav"
-
-# Boot and teardown without rendering (test the pipeline)
-make session ARGS="--dry-run --duration 5"
-
-# Render a pattern spec JSON to a .js file
-make render-pattern ARGS="--spec spec.json --out pattern.js"
-```
-
-## How it works
-
-1. **Doctor** — detects `sclang`, `node`, `pnpm`, Strudel clone on the system
-2. **SCManager** — boots SuperCollider with the project startup file, waits for SuperDirt ready
-3. **BridgeManager** — starts the Strudel OSC bridge (`pnpm run osc`)
-4. **RecorderScript** — generates a SuperCollider Routine that records to WAV at 24-bit
-5. **Normalize** — post-processes with ffmpeg loudnorm to −6 dBFS
-6. **Sidecar** — `.loudness.json` written alongside the WAV with measured metrics
-
-## Output
-
-- 24-bit WAV, 48 kHz, stereo (default)
-- Sidecar `*.loudness.json` with integrated loudness, true peak, LRA
-- Normalized to −6 dBFS integrated loudness
-
-## Troubleshooting
-
-Run `make doctor` first. If prerequisites are missing, run with `--verbose` for platform-specific install hints.
+- Use only Strudel methods listed in §4 of the cheat sheet (docs/redesign-tidal.md).
+- Every layer must have `.slow(>=4)` and `.room(>=0.7)`.
+- Use `.orbit(N)` for layer separation, N ∈ {0..5}.
+- No arrow-function modifiers beyond single-call: `x => x.<method>(<args>)`.

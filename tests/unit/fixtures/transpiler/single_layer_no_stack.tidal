@@ -1,0 +1,3 @@
+setcps (20/60/4)
+
+d1 $ note "c2" # s "sine" # slow 4 # room 0.8

@@ -1,25 +1,32 @@
 # Software Engineering Guidelines (SWED)
 
-These are **non-negotiable** rules for this project. Any agent or human contributor must follow them. Deviations require an entry in [HISTORY.md](HISTORY.md) with justification.
+These are **non-negotiable** rules for this project. Any agent or human contributor must follow
+them. Deviations require an entry in [HISTORY.md](HISTORY.md) with justification.
 
 ---
 
 ## 1. Version control
 
 - **Git, always.** Every change lives in a commit. No "scratch" edits.
-- **Frequent, small commits.** One logical change per commit. Aim for commits that could be reverted independently. If a session produces more than ~50 lines of new code with zero commits, that's a smell.
+- **Frequent, small commits.** One logical change per commit. Aim for commits that could be reverted
+  independently. If a session produces more than ~50 lines of new code with zero commits, that's a
+  smell.
 - **Conventional Commits** style messages: `feat:`, `fix:`, `docs:`, `chore:`, `refactor:`, `test:`, `ci:`. Subject ≤72 chars, body explains *why*.
 - **Public GitHub repo**, created and managed via the `gh` CLI:
+
   ```bash
   gh repo create strudel-gen --public --source=. --remote=origin --push
   ```
-- **Branching**: `main` is always green. Feature work on short-lived branches; PRs merged via `gh pr create` → `gh pr merge --squash`.
+
+- **Branching**: `main` is always green. Feature work on short-lived branches; PRs merged via
+  `gh pr create` → `gh pr merge --squash`.
 - **No force pushes to `main`.** Ever.
 - **`.gitignore` covers**: `out/`, `*.wav`, `node_modules/`, `.venv/`, `__pycache__/`, `.pytest_cache/`, `dist/`, `.DS_Store`, local secrets/env overrides.
 
 ## 2. Language & typing
 
-- **Primary orchestration language: Python ≥3.11** (chosen — see [PLAN.md](PLAN.md) §3). Strudel pattern files remain `.js` (Strudel runtime); SC startup remains `.scd`.
+- **Primary orchestration language: Python ≥3.11** (chosen — see [PLAN.md](PLAN.md) §3). Strudel
+  pattern files remain `.js` (Strudel runtime); SC startup remains `.scd`.
 - **Python**:
   - **Type hints everywhere.** Public functions fully annotated.
   - **`mypy --strict`** must pass. No `# type: ignore` without an inline reason.
@@ -32,18 +39,28 @@ These are **non-negotiable** rules for this project. Any agent or human contribu
 ## 3. Linting & formatting
 
 - **Python**: `ruff check` + `ruff format` (replaces flake8/black/isort). Config in `pyproject.toml`. CI fails on any lint error.
+- **Ruff version pinned** across all config files (`pyproject.toml`, `requirements.txt`,
+  `.pre-commit-config.yaml`). All three must reference the same exact version to prevent
+  drift between local linting and CI. Update all three simultaneously when upgrading.
 - **TypeScript** (if introduced): `eslint` + `prettier`, or `biome` (preferred — single tool).
 - **Shell scripts**: `shellcheck` clean. Enforced in CI via `ludeeus/action-shellcheck`.
 - **Markdown**: `markdownlint-cli2` clean for all repo `*.md` + `docs/**/*.md` + `skill/**/*.md`. Configured in `.markdownlint.jsonc`. Enforced in CI via `DavidAnson/markdownlint-cli2-action`.
-- **Pre-commit hook** runs lint+format+type-check before every commit. Install via `pre-commit install`. Hook is mandatory; bypassing with `--no-verify` requires a HISTORY.md note. Also run in CI via `pre-commit run --all-files`.
+- **Pre-commit hook** runs lint+format+type-check before every commit. Install via
+  `pre-commit install`. Hook is mandatory; bypassing with `--no-verify` requires a HISTORY.md note.
+  Also run in CI via `pre-commit run --all-files`.
 
 ## 4. Testing
 
 - **TDD by default.** Red → green → refactor. Write the failing test first; commit it; then write the code that makes it pass.
-- **BDD for user-facing behavior.** Use **`pytest-bdd`** (Python) or **Cucumber.js** (TS) with `.feature` files in `tests/features/`. Each skill capability has a feature file written in Gherkin (`Given/When/Then`) before implementation.
+- **BDD for user-facing behavior.** Use **`pytest-bdd`** (Python) or **Cucumber.js** (TS) with
+  `.feature` files in `tests/features/`. Each skill capability has a feature file written in
+  Gherkin (`Given/When/Then`) before implementation.
 - **Three test layers**, all required:
-  1. **Unit tests** — pure, fast, isolated. Mock `subprocess`, filesystem, network, time. Use `pytest` + `pytest-mock` (or `unittest.mock`).
-  2. **Integration tests** — exercise real subprocesses where safe (e.g. invoking `sclang -h`), real temp files. Skipped automatically if external binaries are missing, with a clear skip reason.
+  1. **Unit tests** — pure, fast, isolated. Mock `subprocess`, filesystem, network, time.
+     Use `pytest` + `pytest-mock` (or `unittest.mock`).
+  2. **Integration tests** — exercise real subprocesses where safe (e.g. invoking `sclang -h`),
+     real temp files. Skipped automatically if external binaries are missing, with a clear skip
+     reason.
   3. **Acceptance tests** — end-to-end via the BDD features. May be marked `@slow` and gated behind a CI label, but must run in nightly CI.
 - **Coverage**: ≥85% line coverage on the orchestration package. `pytest --cov --cov-fail-under=85` enforced in CI and via `make test`.
 - **No test is allowed to depend on network access** unless explicitly marked `@pytest.mark.network` and skipped by default.
@@ -51,15 +68,19 @@ These are **non-negotiable** rules for this project. Any agent or human contribu
 
 ## 5. Logging
 
-- **Structured logging to files**, never `print()` / `console.log`. Use Python's `logging` module configured via `logging.config.dictConfig` (or `structlog` if structured JSON output is needed).
+- **Structured logging to files**, never `print()` / `console.log`. Use Python's `logging` module
+  configured via `logging.config.dictConfig` (or `structlog` if structured JSON output is needed).
 - **Log levels are meaningful**:
   - `DEBUG` — verbose tracing, off by default.
   - `INFO` — lifecycle events (session start, recording start/stop, pattern evaluated).
   - `WARNING` — recoverable oddities (port in use, retrying).
   - `ERROR` — operation failed but process continues.
   - `CRITICAL` — process is going down.
-- **Log everything** that crosses a boundary: every subprocess invocation (command + exit code + duration), every OSC message sent/received (at DEBUG), every file written.
-- **Log location**: `~/.local/state/strudel-gen/logs/strudel-gen.log` (Linux/Mac, per XDG); `%LOCALAPPDATA%\strudel-gen\logs\` on Windows. **Rotated**: `RotatingFileHandler`, 10 MB × 5 files.
+- **Log everything** that crosses a boundary: every subprocess invocation (command + exit code +
+  duration), every OSC message sent/received (at DEBUG), every file written.
+- **Log location**: `~/.local/state/strudel-gen/logs/strudel-gen.log` (Linux/Mac, per XDG);
+  `%LOCALAPPDATA%\strudel-gen\logs\` on Windows. **Rotated**: `RotatingFileHandler`, 10 MB × 5
+  files.
 - **Console output** is for human-facing CLI feedback only (progress, prompts, errors) — it is *not* the log. Use `rich` for console.
 - **No secrets in logs.** No file paths containing user PII at INFO level (paths go to DEBUG).
 
@@ -78,8 +99,12 @@ Rules:
 - **No shell-specific syntax** in Python code. Cross-platform subprocess invocation: pass `list[str]` to `subprocess.run`, not shell strings. `shell=False` always.
 - **Path separators**: never hardcode `/` or `\`. Use `Path` joins.
 - **Line endings**: `.gitattributes` enforces `* text=auto eol=lf` plus `*.bat text eol=crlf`.
-- **External tool discovery**: locate `sclang`, `pnpm`, `node` via `shutil.which`; fail with an actionable error message if missing, naming the platform-specific install path (e.g. `/Applications/SuperCollider.app/Contents/MacOS/sclang` on macOS).
-- **WSL specifics**: detect with `/proc/version` containing `microsoft`. When detected, audio/OSC must route through the Windows host (document this clearly — SuperCollider does not run usefully inside WSL for audio).
+- **External tool discovery**: locate `sclang`, `pnpm`, `node` via `shutil.which`; fail with an
+  actionable error message if missing, naming the platform-specific install path
+  (e.g. `/Applications/SuperCollider.app/Contents/MacOS/sclang` on macOS).
+- **WSL specifics**: detect with `/proc/version` containing `microsoft`. When detected, audio/OSC
+  must route through the Windows host (document this clearly — SuperCollider does not run usefully
+  inside WSL for audio).
 - **CI matrix**: GitHub Actions runs the full suite on `ubuntu-latest`, `macos-latest`, `windows-latest`. WSL is exercised via `windows-latest` + `wsl-bash` action.
 
 ## 7. Lean repo — no generated artifacts
@@ -87,7 +112,9 @@ Rules:
 - **No large or generated files** are committed. The repo must stay small enough to clone instantly.
 - **Build artifacts** (`_build/`, `_output/`, `.venv/`, `node_modules/`, etc.) go in `.gitignore`-covered directories. See `.gitignore` for the canonical list.
 - **Makefile** drives all build/clean/test operations so nothing needs to be in the repo except source + config.
-- **Python**: dependencies pinned in `pyproject.toml` + `requirements.txt`; virtual environments live in `.venv/` (ignored).
+- **Python**: dependencies pinned in `pyproject.toml` (canonical); `requirements.txt` mirrors it.
+  Virtual environments live in `.venv/` (ignored). Keep the two files in sync; `pyproject.toml` is
+  the source of truth.
 - **Node**: `.nvmrc` declares the Node version; `node_modules/` is ignored; dependencies installed at build time.
 - **No committed wheel files, egg-info, coverage reports, or log files.**
 - A `make clean` target must restore the checkout to a pristine state (remove all generated files, keep only VCS-tracked ones).

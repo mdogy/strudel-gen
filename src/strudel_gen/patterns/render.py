@@ -55,7 +55,8 @@ def render_pattern(spec: PatternSpec, *, template_name: str = "default.j2") -> s
 
     layers_joined = ",\n".join(layer_strings)
 
-    return template.render(
+    rendered = template.render(
         cpm=spec.cpm,
         layers=layers_joined,
     )
+    return rendered + "\n"

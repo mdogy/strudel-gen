@@ -1,0 +1,5 @@
+setcps (20/60/4)
+
+d1 $ slowcat [
+  slow 4 (note $ cat ["c2", "e2", "g2"] # slow 4)
+]

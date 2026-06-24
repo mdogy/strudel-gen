@@ -1,0 +1,6 @@
+setcps (135/60/4)
+
+d1 $ slowcat [
+  slow 4 note "c2" # s "supersaw" # lpf 400 # room 0.8 # slow 8,
+  slow 2 note "eb2" # s "supersaw" # lpf 600 # room 0.8 # slow 6
+]

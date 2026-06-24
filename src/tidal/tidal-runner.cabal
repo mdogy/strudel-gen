@@ -1,0 +1,25 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.39.1.
+--
+-- see: https://github.com/sol/hpack
+
+name:           tidal-runner
+version:        0.1.0
+synopsis:       Tidal runner for strudel-gen
+category:       Music
+author:         strudel-gen
+maintainer:     strudel-gen
+build-type:     Simple
+
+executable tidal-runner
+  main-is: Main.hs
+  other-modules:
+      BootTidal
+      Paths_tidal_runner
+  hs-source-dirs:
+      ./
+  build-depends:
+      base
+    , tidal
+  default-language: Haskell2010

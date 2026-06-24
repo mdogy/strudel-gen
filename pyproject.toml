@@ -18,6 +18,7 @@ dependencies = [
     "platformdirs>=4.0",
     "jinja2>=3.1",
     "rich>=13.0",
+    "psutil>=6.0",
 ]
 
 [project.scripts]
@@ -29,7 +30,7 @@ dev = [
     "pytest-cov>=5.0",
     "pytest-mock>=3.14",
     "pytest-bdd>=7.0",
-    "ruff>=0.4",
+    "ruff==0.14.10",
     "mypy>=1.10",
     "syrupy>=4.0",
 ]
@@ -53,6 +54,7 @@ python_version = "3.11"
 ignore_missing_imports = true
 disallow_untyped_defs = true
 disallow_any_unimported = false
+
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

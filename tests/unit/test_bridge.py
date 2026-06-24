@@ -11,17 +11,17 @@ from strudel_gen.bridge import BridgeError, BridgeManager
 
 
 class TestBridgeManagerInit:
-    def test_init_with_explicit_dir(self):
+    def test_init_with_explicit_dir(self) -> None:
         manager = BridgeManager(strudel_dir=Path("/custom/strudel"))
         assert manager._strudel_dir == Path("/custom/strudel")
 
-    def test_init_resolves_strudel_dir_when_none(self):
+    def test_init_resolves_strudel_dir_when_none(self) -> None:
         with patch("strudel_gen.bridge.detect") as mock_detect:
             mock_detect.return_value.strudel_dir = Path("/detected/strudel")
             manager = BridgeManager()
             assert manager._strudel_dir == Path("/detected/strudel")
 
-    def test_init_raises_when_no_strudel_dir(self):
+    def test_init_raises_when_no_strudel_dir(self) -> None:
         with patch("strudel_gen.bridge.detect") as mock_detect:
             mock_detect.return_value.strudel_dir = None
             with pytest.raises(BridgeError, match="Strudel clone not found"):
@@ -35,7 +35,7 @@ class TestBridgeManagerStart:
         mock_proc.stdout = io.StringIO(output)
         return mock_proc
 
-    def test_start_ready_line_detected(self):
+    def test_start_ready_line_detected(self) -> None:
         mock_proc = self._make_mock_proc("loading...\nlistening on port 57120\n")
 
         with (
@@ -47,7 +47,7 @@ class TestBridgeManagerStart:
             manager.start()
             assert manager._process is not None
 
-    def test_start_timeout_raises(self):
+    def test_start_timeout_raises(self) -> None:
         mock_proc = self._make_mock_proc("some output\nstill loading\nmore logs\nno ready signal\n")
 
         with (
@@ -61,7 +61,7 @@ class TestBridgeManagerStart:
 
 
 class TestBridgeManagerContextManager:
-    def test_context_manager_starts_and_stops(self):
+    def test_context_manager_starts_and_stops(self) -> None:
         mock_proc = MagicMock(spec=subprocess.Popen)
         mock_proc.pid = 12345
         mock_proc.stdout = io.StringIO("listening on port 57120\n")
@@ -75,7 +75,7 @@ class TestBridgeManagerContextManager:
                 assert mgr._process is not None
             mock_proc.terminate.assert_called_once()
 
-    def test_stop_kills_process_after_timeout(self):
+    def test_stop_kills_process_after_timeout(self) -> None:
         mock_proc = MagicMock(spec=subprocess.Popen)
         mock_proc.pid = 12345
         mock_proc.wait.side_effect = [subprocess.TimeoutExpired(cmd="pnpm", timeout=5), None]

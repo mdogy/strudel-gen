@@ -1,0 +1,5 @@
+setcps (14/60/4)
+
+d1 $ note "c2 ~ g2 ~" # s "sawtooth" # lpf 180 # room 0.95 # slow 8
+d2 $ note "c5 ~ ~ eb5 ~ ~ g5 ~" # s "sine" # room 0.9 # gain 0.18 # slow 12
+d3 $ note "c3,g3,c4" # s "sine" # room 0.95 # gain 0.12 # slow 16

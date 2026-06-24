@@ -130,6 +130,40 @@ def normalize_to_dbfs(
     return out
 
 
+def to_mp3(wav_path: Path, bitrate: int = 320) -> Path:
+    """Encode a WAV file to MP3 using ffmpeg libmp3lame.
+
+    Args:
+        wav_path: Source WAV file.
+        bitrate: Target bitrate in kbps (default 320).
+
+    Returns:
+        Path to the produced MP3 file (same stem, ``.mp3`` extension).
+
+    Raises:
+        NormalizationError: If ffmpeg is not found or encoding fails.
+    """
+    if not _ffmpeg_available():
+        raise NormalizationError("ffmpeg not found on PATH. Install ffmpeg.")
+    mp3_path = wav_path.with_suffix(".mp3")
+    cmd = [
+        "ffmpeg",
+        "-i", str(wav_path),
+        "-codec:a", "libmp3lame",
+        "-b:a", f"{bitrate}k",
+        "-y",
+        str(mp3_path),
+    ]
+    logger.info("Encoding MP3 at %d kbps: %s -> %s", bitrate, wav_path, mp3_path)
+    try:
+        subprocess.run(cmd, capture_output=True, text=True, timeout=300, check=True)
+    except subprocess.CalledProcessError as exc:
+        raise NormalizationError(f"MP3 encoding failed: {exc.stderr[:500]}") from exc
+    except FileNotFoundError as exc:
+        raise NormalizationError("ffmpeg not found") from exc
+    return mp3_path
+
+
 def _ffmpeg_available() -> bool:
     """Check if ffmpeg is on PATH."""
     try:
@@ -145,7 +179,12 @@ def _ffmpeg_available() -> bool:
 
 
 def _parse_loudnorm_json(stderr: str) -> dict[str, str] | None:
-    """Extract JSON loudness data from loudnorm stderr output."""
+    """Extract JSON loudness data from loudnorm stderr output.
+
+    Handles both ``print_format=json`` (block at end) and the
+    ``print_format=summary`` or mixed output where JSON keys appear
+    on individual lines.
+    """
     try:
         lines = stderr.strip().split("\n")
         json_start = -1
@@ -158,4 +197,19 @@ def _parse_loudnorm_json(stderr: str) -> dict[str, str] | None:
             return data
     except (json.JSONDecodeError, IndexError, TypeError):
         pass
+
+    # Fallback: parse ``key: value`` lines for the measured values
+    try:
+        result: dict[str, str] = {}
+        for line in stderr.split("\n"):
+            line = line.strip()
+            for key in ("input_i", "input_tp", "input_lra", "input_thresh"):
+                if line.startswith(key) and ":" in line:
+                    val = line.split(":", 1)[1].strip()
+                    result[key] = val
+        if result and "input_i" in result:
+            return result
+    except (IndexError, TypeError):
+        pass
+
     return None

@@ -1,0 +1,9 @@
+-- Theremin-only isolation test: one layer, high gain, light reverb.
+-- Same melodic line as d3 in dr-who-inspired.tidal, but on orbit 0
+-- with NO other layers competing for mix room.
+
+setcps 0.5
+
+-- Bare-minimum diagnostic: same notes that worked with supersaw, now with superhammond.
+-- No vib/room/delay yet — we want to know if the synth itself responds to `note`.
+d1 $ slow 2 $ note "b4 d5 e5 [d5 b4] e5 [d5 c5] b4 [g4 a4] b4 e5 [d5 a4]" # s "superhammond" # gain 0.7

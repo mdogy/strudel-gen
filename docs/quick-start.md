@@ -95,6 +95,7 @@ strudel-gen render \
 ```
 
 What happens:
+
 1. `sclang` boots its own audio server
 2. Three SynthDefs load: `dwBass` (sweeping sawtooth), `dwLead` (vibrato sine),
    `dwTexture` (harmonic shimmer)

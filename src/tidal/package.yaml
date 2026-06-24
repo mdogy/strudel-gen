@@ -1,0 +1,12 @@
+name: tidal-runner
+version: 0.1.0
+synopsis: Tidal runner for strudel-gen
+author: strudel-gen
+category: Music
+dependencies:
+  - base
+  - tidal
+executables:
+  tidal-runner:
+    main: Main.hs
+    source-dirs: .

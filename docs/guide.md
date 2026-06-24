@@ -2,7 +2,8 @@
 
 ## Overview
 
-This guide describes a fully local, code-driven pipeline for generating ambient soundscape audio files suitable for video backgrounds. The architecture has three layers that work together:
+This guide describes a fully local, code-driven pipeline for generating ambient soundscape audio files suitable for video backgrounds.
+The architecture has three layers that work together:
 
 1. **Strudel** — a JavaScript live-coding environment that generates OSC (Open Sound Control) pattern messages[^1]
 2. **SuperDirt** — an audio engine running inside SuperCollider that receives those OSC messages and synthesizes or plays back sounds[^2]
@@ -42,7 +43,9 @@ You should hear a sine tone. If you do not, check `Language > Preferences > Audi
 
 sc3-plugins extend SuperCollider with additional synthesizer UGens used by SuperDirt.[^5]
 
-- **macOS/Windows**: Download the binary release from `https://supercollider.github.io/sc3-plugins`, unzip, and copy the `SC3plugins` folder to SuperCollider's Extensions directory. Find that directory by evaluating `Platform.userExtensionDir` in SC.[^6]
+- **macOS/Windows**: Download the binary release from `https://supercollider.github.io/sc3-plugins`,
+  unzip, and copy the `SC3plugins` folder to SuperCollider's Extensions directory.
+  Find that directory by evaluating `Platform.userExtensionDir` in SC.[^6]
 - **Linux (Ubuntu)**: `sudo apt install sc3-plugins`[^7]
 
 After installing, restart SuperCollider and recompile the class library via `Language > Recompile Class Library`.
@@ -55,7 +58,8 @@ SuperDirt is installed as a SuperCollider Quark (package). In the SuperCollider 
 Quarks.checkForUpdates({ Quarks.install("SuperDirt", "v1.7.2"); thisProcess.recompile() })
 ```
 
-Wait for the post window to confirm installation is complete. Alternatively, install manually by downloading these three repositories and placing them in your Extensions folder:[^8][^9]
+Wait for the post window to confirm installation is complete.
+Alternatively, install manually by downloading these three repositories and placing them in your Extensions folder:[^8] [^9]
 
 - `https://github.com/musikinformatik/SuperDirt`
 - `https://github.com/tidalcycles/Dirt-Samples` (rename folder to exactly `Dirt-Samples`)
@@ -94,7 +98,8 @@ pnpm install
 
 SuperCollider has a startup file that runs automatically every time it boots. Open it from: `File > Open Startup File`.[^12]
 
-Replace any existing contents with the following complete startup script. This configures SuperDirt with enough resources for generative soundscapes and exposes all 12 orbit buses:
+Replace any existing contents with the following complete startup script.
+This configures SuperDirt with enough resources for generative soundscapes and exposes all 12 orbit buses:
 
 ```supercollider
 (
@@ -130,13 +135,14 @@ s.reboot {
 
 Save the file. From this point on, SuperDirt starts automatically every time you open SuperCollider.[^12]
 
-**Verifying startup**: After booting, the SC post window should show lines like `SuperDirt started listening on port 57120` and sample loading progress. No red error lines should appear.
+**Verifying startup**: After booting, the SC post window should show lines like `SuperDirt started listening on port 57120` and sample loading progress.
+No red error lines should appear.
 
 ### 2.2 Custom Sample Packs
 
 To add your own samples (WAV or AIFF files), organize them into named subfolders:
 
-```
+```text
 /my-samples/
   drones/        <- each subfolder becomes a sample name
     drone1.wav
@@ -147,7 +153,7 @@ To add your own samples (WAV or AIFF files), organize them into named subfolders
     texture1.wav
 ```
 
-Then add this line inside `s.waitForBoot` in your startup file:[^13][^12]
+Then add this line inside `s.waitForBoot` in your startup file:[^13] [^12]
 
 ```supercollider
 ~dirt.loadSoundFiles("/path/to/my-samples/*");
@@ -159,7 +165,7 @@ In Strudel, you then reference them as `s("drones")`, `s("pads")`, etc.
 
 ## Part 3: Running the OSC Bridge
 
-The OSC bridge is a small Node.js server that forwards Strudel's pattern events (sent as OSC over UDP) to SuperDirt.[^14][^1]
+The OSC bridge is a small Node.js server that forwards Strudel's pattern events (sent as OSC over UDP) to SuperDirt.[^14] [^1]
 
 ### 3.1 Start the Bridge
 
@@ -171,7 +177,7 @@ pnpm run osc
 
 You should see output like:
 
-```
+```text
 OSC bridge running, listening on localhost:57120
 ```
 
@@ -189,7 +195,8 @@ Open your browser to `http://localhost:4321`. This is your Strudel code editor.[
 
 ### 3.3 Switch Strudel's Audio Output to SuperDirt
 
-By default, Strudel uses Web Audio API for sound. To route audio through SuperDirt instead, you must select the SuperDirt output in the REPL settings, or add this at the top of your pattern file:[^1]
+By default, Strudel uses Web Audio API for sound.
+To route audio through SuperDirt instead, you must select the SuperDirt output in the REPL settings, or add this at the top of your pattern file:[^1]
 
 In the Strudel REPL settings panel (gear icon), set Audio Output to **SuperDirt / OSC**.
 
@@ -219,7 +226,9 @@ s.record(path: "/Users/yourname/Desktop/soundscape.wav", duration: 300);
 - `path`: full file path including filename; SuperCollider infers WAV format from the `.wav` extension[^15]
 - `duration`: seconds of audio to record; recording stops automatically when complete[^16]
 
-After issuing this command, go to Strudel and start playing your pattern. SuperCollider captures everything the audio server outputs. When `duration` seconds elapse, the post window shows `Recording stopped` and the file is ready.[^16]
+After issuing this command, go to Strudel and start playing your pattern.
+SuperCollider captures everything the audio server outputs.
+When `duration` seconds elapse, the post window shows `Recording stopped` and the file is ready.[^16]
 
 **Important**: Each new recording needs a unique filename, or the previous file will be silently overwritten without warning.[^16]
 
@@ -266,7 +275,8 @@ s.recChannels = 2;
 
 ### 4.4 Multi-Stem Recording (Advanced)
 
-For video post-production, recording separate stems (e.g., pads separate from textures) gives full mixing control. Each Strudel pattern layer can be assigned to a different orbit, and orbits can be recorded to separate audio buses.[^17][^18]
+For video post-production, recording separate stems (e.g., pads separate from textures) gives full mixing control.
+Each Strudel pattern layer can be assigned to a different orbit, and orbits can be recorded to separate audio buses.[^17] [^18]
 
 Modify the startup file to route orbits to separate stereo channels (e.g., 3 stereo stems = 6 channels total):
 
@@ -282,7 +292,7 @@ In Strudel, assign patterns to orbits explicitly:
 // Orbit 0 → channel 0-1 (pads)
 $: note("3 eb3 g3>").s("pad").slow(4).orbit(0)
 
-// Orbit 1 → channel 2-3 (texture/drone)  
+// Orbit 1 → channel 2-3 (texture/drone)
 $: s("drones:2").slow(8).room(0.9).orbit(1)
 
 // Orbit 2 → channel 4-5 (subtle percussion)
@@ -430,7 +440,7 @@ stack(
 
 When instructing an AI coder to generate a soundscape, provide this prompt structure:
 
-```
+```text
 Generate a Strudel soundscape pattern for the following video context:
 
 VIDEO MOOD: [e.g., "mysterious and slowly evolving, sci-fi underwater"]
@@ -459,7 +469,7 @@ This is the step-by-step sequence to run for every recording session.
 
 Open the SuperCollider IDE. The startup file runs automatically, booting the server and starting SuperDirt. Verify in the post window:
 
-```
+```text
 SuperDirt: listening to Tidal on port 57120
 ```
 
@@ -492,14 +502,15 @@ In the Strudel REPL, type and run:
 s("bd")
 ```
 
-You should hear a kick drum through SuperCollider, not the browser. If no sound, check: (a) OSC bridge is running, (b) SuperDirt reports no errors, (c) Strudel output is set to OSC/SuperDirt.
+You should hear a kick drum through SuperCollider, not the browser.
+If no sound, check: (a) OSC bridge is running, (b) SuperDirt reports no errors, (c) Strudel output is set to OSC/SuperDirt.
 
 ### Step 5 — Paste and Iterate the Soundscape Pattern
 
 Paste the AI-generated pattern into Strudel. Press `Ctrl+Enter` to evaluate. Listen critically. Common adjustments:
 
 | Issue | Fix |
-|---|---|
+| --- | --- |
 | Too busy / rhythmic | Increase `.slow()` multiplier on busy layers |
 | Too thin / sparse | Add another `stack()` layer |
 | Too dry | Increase `.room()` toward 1.0 and `.size()` toward 0.95 |
@@ -539,34 +550,35 @@ Do not touch the pattern while recording unless intentional evolution is desired
 
 When the recording stops (automatically after `duration` seconds), the post window shows:
 
-```
+```text
 Recording stopped. Wrote N samples.
 ```
 
-The file is at the path you specified. Open it in any audio editor (Audacity, Logic, Reaper) to trim, normalize, or adjust levels before dropping it into your video timeline.[^15]
+The file is at the path you specified.
+Open it in any audio editor (Audacity, Logic, Reaper) to trim, normalize, or adjust levels before dropping it into your video timeline.[^15]
 
 ***
 
 ## Part 7: Troubleshooting
 
 | Symptom | Likely Cause | Fix |
-|---|---|---|
+| --- | --- | --- |
 | No sound in SuperCollider | Wrong audio device | `Language > Preferences > Audio`, select correct output device[^4] |
 | SC post window shows "alloc failed" | Not enough memory | Increase `s.options.memSize` in startup file[^9] |
 | SC post window shows "too many nodes" | Too many synth layers | Increase `s.options.maxNodes`; simplify pattern |
-| OSC bridge exits immediately | Port conflict | Another process uses port 57120; stop it or run `pnpm run osc -- --port 57121` and update startup file accordingly[^14] |
+| OSC bridge exits immediately | Port conflict | Another process uses port 57120; stop it or run `pnpm run osc -- --port 57121` and update startup file[^14] |
 | Strudel plays in browser but SC is silent | OSC output not selected | Check Strudel settings panel; ensure OSC/SuperDirt output is active |
 | SuperDirt not found on boot | Installation path wrong | Evaluate `Quarks.gui` in SC to verify SuperDirt is installed and enabled |
 | Recording is silent | `s.record` called before pattern plays | Add `0.5.wait` before `s.record` in a Routine, or use the GUI Record button |
-| `.wav` file not recognized by video editor | Recorded as AIFF or 32-bit float | Set `s.recHeaderFormat = "WAV"` and `s.recSampleFormat = "int24"` before recording[^19] |
-| Samples not loading | Wrong path or missing wildcard | Ensure path ends in `/*` and folder contains named subfolders, not loose WAV files[^13][^12] |
+| `.wav` file not recognized by video editor | Recorded as AIFF or 32-bit float | Set `s.recHeaderFormat = "WAV"` and `s.recSampleFormat = "int24"`[^19] |
+| Samples not loading | Wrong path or missing wildcard | Ensure path ends in `/*` and folder contains named subfolders, not loose WAV files[^13] [^12] |
 
 ***
 
 ## Part 8: Output File Specifications
 
 | Parameter | Recommended Value |
-|---|---|
+| --- | --- |
 | Format | WAV (not AIFF) |
 | Sample rate | 44100 Hz (SC default) or 48000 Hz (for video sync) |
 | Bit depth | 24-bit (`int24`) |
@@ -584,7 +596,8 @@ s.options.sampleRate = 48000;
 
 ## Quick Reference Card
 
-```
+```text
+
 SESSION STARTUP CHECKLIST
 ──────────────────────────
 □ 1. Open SuperCollider → startup file auto-runs SuperDirt
@@ -599,45 +612,63 @@ SESSION STARTUP CHECKLIST
 □ 10. Wait for "Recording stopped." in SC post window
 ```
 
----
+***
 
 ## References
 
-1. [MIDI & OSC Strudel - GitHub Pages](https://urswilke.github.io/strudel/learn/input-output/) - The default audio output of Strudel uses the Web Audio API. It is also possible to use Strudel with ...
+1. [MIDI & OSC Strudel - GitHub Pages](https://urswilke.github.io/strudel/learn/input-output/)
+   - The default audio output of Strudel uses the Web Audio API. It is also possible to use Strudel with ...
 
-2. [SuperCollider / SuperDirt - Sardine Documentation](https://sardine.raphaelforment.fr/configuration/superdirt.html) - The SuperDirt repository is a good place to start, especially the hacks/ folder. It will teach you h...
+2. [SuperCollider / SuperDirt - Sardine Documentation](https://sardine.raphaelforment.fr/configuration/superdirt.html)
+   - The SuperDirt repository is a good place to start, especially the hacks/ folder. It will teach you h...
 
-3. [Recorder | SuperCollider 3.14.0 Help](https://doc.sccode.org/Classes/Recorder.html) - A Recorder allows you to write audio to harddisk, reading from a given bus and a certain number of c...
+3. [Recorder | SuperCollider 3.14.0 Help](https://doc.sccode.org/Classes/Recorder.html)
+   - A Recorder allows you to write audio to harddisk, reading from a given bus and a certain number of c...
 
-4. [Install SuperCollider - Renardo (code > music)](https://renardo.org/install/01-install-supercollider/) - Launch SuperCollider and make it work! If it does not work you may need to select the proper sound d...
+4. [Install SuperCollider - Renardo (code > music)](https://renardo.org/install/01-install-supercollider/)
+   - Launch SuperCollider and make it work! If it does not work you may need to select the proper sound d...
 
-5. [Deploying supercollider (sclang) standalone apps - scsynth](https://scsynth.org/t/deploying-supercollider-sclang-standalone-apps/4030) - SuperDirt depends on sc3plugins for extended functionality which is another hurdle. There are instal...
+5. [Deploying supercollider (sclang) standalone apps - scsynth](https://scsynth.org/t/deploying-supercollider-sclang-standalone-apps/4030)
+   - SuperDirt depends on sc3plugins for extended functionality which is another hurdle. There are instal...
 
-6. [Building SuperCollider (and plugins) on Mac M1 - Development](https://scsynth.org/t/building-supercollider-and-plugins-on-mac-m1/4626) - That sounds fine - but odds are, youve probably installed SuperCollider by downloading the prebuilt ...
+6. [Building SuperCollider (and plugins) on Mac M1 - Development](https://scsynth.org/t/building-supercollider-and-plugins-on-mac-m1/4626)
+   - That sounds fine - but odds are, youve probably installed SuperCollider by downloading the prebuilt ...
 
-7. [is copying sc3-plugins into supercollider's extensions folder ... - Reddit](https://www.reddit.com/r/TidalCycles/comments/qi8di9/is_copying_sc3plugins_into_supercolliders/) - I'm on a Linux machine using Ubuntu 20.04. To install sc3-plugins, I simplied downloaded and unzippe...
+7. [sc3-plugins install help - Reddit](https://www.reddit.com/r/TidalCycles/comments/qi8di9/is_copying_sc3plugins_into_supercolliders/)
+   - I'm on a Linux machine using Ubuntu 20.04. To install sc3-plugins, I simplied downloaded and unzippe...
 
-8. [GitHub - daslyfe/StrudelDirt: Super dirt fork intended to have feature ...](https://github.com/daslyfe/StrudelDirt) - If you want SuperDirt to start automatically, you can load it from the startup file. To do this, ope...
+8. [GitHub - daslyfe/StrudelDirt: Super dirt fork intended to have feature ...](https://github.com/daslyfe/StrudelDirt)
+   - If you want SuperDirt to start automatically, you can load it from the startup file. To do this, ope...
 
-9. [with-superdirt [konduktiva]](https://konduktiva.org/doku.php?id=with-superdirt) - This tutorial will teach you how to use SuperDirt with Konduktiva. Installation instructions for Sup...
+9. [with-superdirt [konduktiva]](https://konduktiva.org/doku.php?id=with-superdirt)
+   - This tutorial will teach you how to use SuperDirt with Konduktiva. Installation instructions for Sup...
 
-10. [Live Coding - Strudel Setup - Teaching](https://teaching.alptugan.com/Tutorials/Live-Coding---Strudel-Setup) - This tutorial showcases the installation of Strudel Live Coding tool on your local device. 1. Depend...
+10. [Live Coding - Strudel Setup - Teaching](https://teaching.alptugan.com/Tutorials/Live-Coding---Strudel-Setup)
+    - This tutorial showcases the installation of Strudel Live Coding tool on your local device. 1. Depend...
 
-11. [Installation | STRUDEL Kit](https://strudel.science/strudel-kit/docs/getting-started/installation/) - STRUDEL Kit requires Node.js with npm to run the web applications you build. If you don't already ha...
+11. [Installation | STRUDEL Kit](https://strudel.science/strudel-kit/docs/getting-started/installation/)
+    - STRUDEL Kit requires Node.js with npm to run the web applications you build. If you don't already ha...
 
-12. [[TidalClub] Loading sample packs in SuperDirt - YouTube](https://www.youtube.com/watch?v=nzKjNlgOkTk) - Part of the TidalCycles online live coding course - https://club.tidalcycles.org/t/weeks-1-4-index/
+12. [[TidalClub] Loading sample packs in SuperDirt - YouTube](https://www.youtube.com/watch?v=nzKjNlgOkTk)
+    - Part of the TidalCycles online live coding course - <https://club.tidalcycles.org/t/weeks-1-4-index/>
 
-13. [Custom Samples | Tidal Cycles](https://tidalcycles.org/docs/configuration/AudioSamples/audiosamples/) - Adding and using your own custom samples in Tidal Cycles is relatively easy. You don't actually add ...
+13. [Custom Samples | Tidal Cycles](https://tidalcycles.org/docs/configuration/AudioSamples/audiosamples/)
+    - Adding and using your own custom samples in Tidal Cycles is relatively easy. You don't actually add ...
 
-14. [@strudel/osc - npm](https://npmjs.com/package/@strudel/osc) - By default it will use port 57120 for the osc client, which is what superdirt uses. You can change i...
+14. [@strudel/osc - npm](https://npmjs.com/package/@strudel/osc)
+    - By default it will use port 57120 for the osc client, which is what superdirt uses. You can change i...
 
-15. [Recording in SuperCollider - GitHub](https://github.com/supercollider/supercollider/wiki/Recording-in-SuperCollider) - The timer for the "duration" argument waits for paused recordings. "duration" the length of the outp...
+15. [Recording in SuperCollider - GitHub](https://github.com/supercollider/supercollider/wiki/Recording-in-SuperCollider)
+    - The timer for the "duration" argument waits for paused recordings. "duration" the length of the outp...
 
-16. [SuperCollider Mini Tutorial: 1. Recording to an Audio File - YouTube](https://www.youtube.com/watch?v=HCRXImVxgxw) - Support these tutorials on Patreon for early access, shout-outs at the end of each video, and other ...
+16. [SuperCollider Mini Tutorial: 1. Recording to an Audio File - YouTube](https://www.youtube.com/watch?v=HCRXImVxgxw)
+    - Support these tutorials on Patreon for early access, shout-outs at the end of each video, and other ...
 
-17. [Separate audio outputs - TidalCycles userbase](https://userbase.tidalcycles.org/Separate_audio_outputs.html) - ... record all the channels straight from supercollider into a single multichannel file. Have a look...
+17. [Separate audio outputs - TidalCycles userbase](https://userbase.tidalcycles.org/Separate_audio_outputs.html)
+    - ... record all the channels straight from supercollider into a single multichannel file. Have a look...
 
-18. [Multichannel routing to Ableton via Soundflower - TidalCycles](https://forum.toplap.org/t/multichannel-routing-to-ableton-via-soundflower/398) - Routing in Windows is problematic so I decided to record as separet channels in Supercollider. I've ...
+18. [Multichannel routing to Ableton via Soundflower - TidalCycles](https://forum.toplap.org/t/multichannel-routing-to-ableton-via-soundflower/398)
+    - Routing in Windows is problematic so I decided to record as separet channels in Supercollider. I've ...
 
-19. [Incorrect encoding of "WAV" recordings? - Questions - scsynth](https://scsynth.org/t/incorrect-encoding-of-wav-recordings/3390) - I've recorded some of my SuperCollider pieces as “WAV” files from SuperCollider. And those files are...
-
+19. [Incorrect encoding of "WAV" recordings? - Questions - scsynth](https://scsynth.org/t/incorrect-encoding-of-wav-recordings/3390)
+    - I've recorded some of my SuperCollider pieces as “WAV” files from SuperCollider. And those files are...

@@ -1,0 +1,21 @@
+-- Dr. Who-inspired soundscape v4 — 4 layers, theremin via superhammond.
+--   d1 (orbit 0)  supersaw bass figure         E D E D E D C D, lpf 400
+--   d2 (orbit 1)  supersaw atmospheric strings slow attack/release, follows bass
+--   d3 (orbit 2)  superhammond theremin lead   quarter+eighth, natural Hammond tremolo
+--   d4 (orbit 3)  supermandolin koto texture   sparse plucks, high register
+--
+-- NOTE on synth choices for this SuperDirt build:
+--   `supersine` and `supertri` are NOT registered (verified by SynthDescLib
+--    dump on 2026-05-25).  `superhammond` IS registered and gives the closest
+--    sustained-organ-with-tremolo theremin character without needing the
+--    `# vib` parameter (which silently breaks the event on this synth).
+
+setcps 0.5
+
+d1 $ slow 5 $ note "e2 d2 e2 d2 e2 d2 c2 d2" # s "supersaw" # lpf 400 # room 0.93 # gain 0.45 # orbit 0
+
+d2 $ slow 8 $ note "<e3 g3 b3 e4> <d3 a3 d4 a3>" # s "supersaw" # lpf 1400 # attack 1.5 # release 3 # room 0.9 # gain 0.32 # orbit 1
+
+d3 $ slow 2 $ note "b4 d5 e5 [d5 b4] e5 [d5 c5] b4 [g4 a4] b4 e5 [d5 a4]" # s "superhammond" # room 0.55 # delay 0.25 # delaytime 0.5 # delayfeedback 0.4 # gain 0.7 # orbit 2
+
+d4 $ slow 3 $ note "<e5 g5> ~ <b5 d6> ~ a5 ~ <e6 g5> ~" # s "supermandolin" # room 0.6 # gain 0.6 # orbit 3

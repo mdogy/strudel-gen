@@ -47,6 +47,8 @@ Routine({{
         path: "{path_str}".standardizePath,
         duration: {self.duration}
     );
+    ({self.duration} + 4).wait;
+    0.exit;
 }}).play;
 )
 """

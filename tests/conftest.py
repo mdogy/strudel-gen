@@ -1,6 +1,7 @@
 """Shared pytest fixtures."""
 
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -12,7 +13,7 @@ def fixture_dir() -> Path:
 
 
 @pytest.fixture
-def sample_pattern_spec() -> dict:
+def sample_pattern_spec() -> dict[str, Any]:
     """A minimal valid PatternSpec for testing."""
     return {
         "cpm": 20,

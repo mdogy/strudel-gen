@@ -1,8 +1,10 @@
 """Typer CLI entrypoint — `strudel-gen` command with subcommands."""
 
+import json
 import logging
 import subprocess
 import time as _time
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Annotated
 
@@ -13,9 +15,11 @@ from rich.table import Table
 from strudel_gen.bridge import BridgeManager
 from strudel_gen.detect import detect, platform_install_hints
 from strudel_gen.logging_setup import setup_logging
-from strudel_gen.normalize import normalize_to_dbfs
+from strudel_gen.normalize import normalize_to_dbfs, to_mp3
 from strudel_gen.recorder import RecorderScript
+from strudel_gen.render_orchestrator import render_tidal
 from strudel_gen.sc import SCManager
+from strudel_gen.tidal_manager import TidalManager
 
 app = typer.Typer(
     name="strudel-gen",
@@ -27,6 +31,32 @@ logger = logging.getLogger(__name__)
 # Pattern files shipped with the package
 _PATTERNS_DIR = Path(__file__).resolve().parent.parent / "patterns"
 _SC_DIR = Path(__file__).resolve().parent.parent / "supercollider"
+
+
+def _write_render_sidecar(
+    out_path: Path,
+    pattern_file: Path | None,
+    engine: str,
+    duration: int,
+    normalized: bool,
+    mp3_path: Path | None = None,
+    target_dbfs: float = -6.0,
+) -> Path:
+    """Write a JSON sidecar next to the output WAV describing the render."""
+    sidecar = out_path.with_suffix(".json")
+    data: dict[str, object] = {
+        "pattern": str(pattern_file) if pattern_file else None,
+        "engine": engine,
+        "duration_s": duration,
+        "wav": str(out_path),
+        "mp3": str(mp3_path) if mp3_path else None,
+        "normalized": normalized,
+        "target_dbfs": target_dbfs if normalized else None,
+        "rendered_at": datetime.now(timezone.utc).isoformat(),
+    }
+    sidecar.write_text(json.dumps(data, indent=2))
+    logger.info("Wrote render sidecar: %s", sidecar)
+    return sidecar
 
 
 def _render_via_sc_script(
@@ -192,6 +222,18 @@ def session(
 
 @app.command()
 def render(
+    engine: Annotated[
+        str,
+        typer.Option(
+            "--engine",
+            "-e",
+            help=(
+                "Render engine: 'tidal' (Tidal Cycles + SuperDirt, requires ghci+Tidal), "
+                "'sc-native' (self-contained SC script, no Tidal needed). "
+                "Inferred from --pattern extension if not specified."
+            ),
+        ),
+    ] = "auto",
     mood: Annotated[
         str, typer.Option("--mood", "-m", help="Mood description (used when no --pattern given)")
     ] = "ambient drone",
@@ -210,6 +252,7 @@ def render(
             help=(
                 "Pattern file to render. "
                 ".scd = self-contained SC script (recommended for automation). "
+                ".tidal = Tidal Cycles pattern; uses ghci + SuperDirt. "
                 ".js  = Strudel pattern; requires the Strudel REPL to be playing."
             ),
         ),
@@ -217,6 +260,10 @@ def render(
     no_normalize: Annotated[
         bool, typer.Option("--no-normalize", help="Skip ffmpeg normalization")
     ] = False,
+    mp3: Annotated[
+        int | None,
+        typer.Option("--mp3", help="Encode an MP3 sidecar at this bitrate in kbps (e.g. 320)."),
+    ] = None,
     timeout_sc: Annotated[float, typer.Option("--timeout-sc", help="SC boot timeout")] = 60.0,
     timeout_bridge: Annotated[
         float, typer.Option("--timeout-bridge", help="Bridge boot timeout")
@@ -224,23 +271,25 @@ def render(
 ) -> None:
     """Render a soundscape to WAV.
 
-    Two render paths:
+    Render paths (inferred from --pattern extension unless --engine is set):
+
+     \b
+    --engine tidal / .tidal  Tidal Cycles pattern.
+                              Boots SC + SuperDirt, starts ghci with BootTidal.hs,
+                              evaluates the pattern, synchronizes recording via
+                              filesystem flag, records audio, then hushes and exits.
+                              Requires Tidal Cycles to be installed.
 
     \b
-    --pattern <file>.scd   Self-contained SuperCollider script.
-                           Boots SC, plays the pattern, records, and exits.
-                           Does NOT need pnpm / Strudel.
-                           Example:
-                             strudel-gen render \\
-                               --pattern src/supercollider/dr-who-render.scd \\
-                               --duration 120 --out drwho.wav
+    --engine sc-native / .scd  Self-contained SuperCollider script.
+                                Boots SC, plays the pattern, records, and exits.
+                                Does NOT need pnpm / Tidal / Strudel.
 
     \b
-    --pattern <file>.js    Strudel pattern (for when you have the Strudel REPL
-                           already playing). Boots SC + OSC bridge, then
-                           records whatever SuperDirt is producing.
-                           NOTE: you must manually paste and play the .js file
-                           in the Strudel browser before running this command.
+    .js  Strudel pattern (for when you have the Strudel REPL already playing).
+         Boots SC + OSC bridge, then records whatever SuperDirt is producing.
+         NOTE: you must manually paste and play the .js file in the Strudel
+         REPL before running this command.
     """
     _ = (mood, cpm)  # reserved for future LLM/preset pattern selection
 
@@ -252,27 +301,80 @@ def render(
     out_path = out.expanduser().resolve()
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
+    # Resolve engine from pattern extension if not explicitly set
+    resolved_engine = engine
+    if resolved_engine == "auto" and pattern_file:
+        ext = Path(pattern_file).suffix.lower()
+        if ext == ".tidal":
+            resolved_engine = "tidal"
+        elif ext == ".scd":
+            resolved_engine = "sc-native"
+        elif ext == ".js":
+            resolved_engine = "strudel-bridge"
+
     # ------------------------------------------------------------------
-    # Path A — self-contained .scd script (preferred for automation)
+    # Engine: Tidal Cycles .tidal pattern (filesystem-flag sync)
     # ------------------------------------------------------------------
-    if pattern_file and str(pattern_file).endswith(".scd"):
-        scd_path = pattern_file.expanduser().resolve()
-        if not scd_path.exists():
-            console.print(f"[red]Pattern file not found: {scd_path}[/red]")
+    if resolved_engine == "tidal":
+        tidal_path = (pattern_file or Path()).expanduser().resolve() if pattern_file else None
+        if not tidal_path or not tidal_path.exists():
+            console.print("[red]A valid --pattern <file>.tidal is required for --engine tidal[/red]")
+            raise typer.Exit(1)
+
+        console.print(f"[bold]Tidal pattern:[/bold] {tidal_path.name}")
+        console.print("[bold]Rendering via Tidal Cycles + SuperDirt...[/bold]")
+        try:
+            render_tidal(
+                pattern_path=tidal_path,
+                out_path=out_path,
+                duration=float(duration),
+                no_normalize=no_normalize,
+            )
+        except Exception as exc:
+            console.print(f"[red]Render failed: {exc}[/red]")
+            raise typer.Exit(1) from exc
+
+    # ------------------------------------------------------------------
+    # Engine: self-contained .scd script (preferred for automation)
+    # ------------------------------------------------------------------
+    elif resolved_engine == "sc-native":
+        scd_path = (pattern_file or Path()).expanduser().resolve() if pattern_file else None
+        if not scd_path or not scd_path.exists():
+            ext_hint = ".scd" if resolved_engine == "sc-native" else ""
+            console.print(
+                f"[red]A valid --pattern <file>{ext_hint} is required for --engine"
+                f" {resolved_engine}[/red]"
+            )
             raise typer.Exit(1)
 
         console.print(f"[bold]Rendering via SC script:[/bold] {scd_path.name}")
         console.print(f"[dim]Output → {out_path}  |  Duration: {duration}s[/dim]")
 
-        timeout = float(duration) + timeout_sc + 15.0
+        timeout = float(duration) + timeout_sc + 120.0
         rc = _render_via_sc_script(scd_path, out_path, float(duration), timeout=timeout)
 
         if rc != 0:
             console.print(f"[red]sclang exited with code {rc}. Check logs for details.[/red]")
             raise typer.Exit(rc)
 
+        if out_path.exists():
+            file_size = out_path.stat().st_size
+            console.print(f"[green]Recorded {out_path} ({file_size / 1024:.1f} KB)[/green]")
+
+            if not no_normalize:
+                try:
+                    console.print("[dim]Normalizing to -6 dBFS...[/dim]")
+                    normalized = normalize_to_dbfs(out_path, target=-6.0)
+                    console.print(f"[green]Normalized: {normalized}[/green]")
+                except Exception as exc:
+                    logger.warning("Normalization skipped: %s", exc)
+                    console.print(f"[yellow]Normalization warning: {exc}[/yellow]")
+        else:
+            console.print("[red]Output file not found — recording may have failed.[/red]")
+            raise typer.Exit(1)
+
     # ------------------------------------------------------------------
-    # Path B — Strudel .js pattern (needs running REPL + bridge)
+    # Engine: Strudel .js pattern (needs running REPL + bridge)
     # ------------------------------------------------------------------
     else:
         if pattern_file:
@@ -315,24 +417,42 @@ def render(
             bridge_mgr.stop()
             sc_mgr.stop()
 
-    # ------------------------------------------------------------------
-    # Post-processing (both paths)
-    # ------------------------------------------------------------------
-    if out_path.exists():
-        file_size = out_path.stat().st_size
-        console.print(f"[green]Recorded {out_path} ({file_size / 1024:.1f} KB)[/green]")
+        if out_path.exists():
+            file_size = out_path.stat().st_size
+            console.print(f"[green]Recorded {out_path} ({file_size / 1024:.1f} KB)[/green]")
 
-        if not no_normalize:
+            if not no_normalize:
+                try:
+                    console.print("[dim]Normalizing to -6 dBFS...[/dim]")
+                    normalized = normalize_to_dbfs(out_path, target=-6.0)
+                    console.print(f"[green]Normalized: {normalized}[/green]")
+                except Exception as exc:
+                    logger.warning("Normalization skipped: %s", exc)
+                    console.print(f"[yellow]Normalization warning: {exc}[/yellow]")
+        else:
+            console.print("[red]Output file not found — recording may have failed.[/red]")
+            raise typer.Exit(1)
+
+    # Common post-render: optional MP3 encode + JSON sidecar
+    if out_path.exists():
+        mp3_path: Path | None = None
+        if mp3 is not None:
             try:
-                console.print("[dim]Normalizing to -6 dBFS...[/dim]")
-                normalized = normalize_to_dbfs(out_path, target=-6.0)
-                console.print(f"[green]Normalized: {normalized}[/green]")
+                mp3_path = to_mp3(out_path, mp3)
+                console.print(f"[green]MP3:[/green] {mp3_path}")
             except Exception as exc:
-                logger.warning("Normalization skipped: %s", exc)
-                console.print(f"[yellow]Normalization warning: {exc}[/yellow]")
-    else:
-        console.print("[red]Output file not found — recording may have failed.[/red]")
-        raise typer.Exit(1)
+                logger.warning("MP3 encoding skipped: %s", exc)
+                console.print(f"[yellow]MP3 warning: {exc}[/yellow]")
+
+        sidecar = _write_render_sidecar(
+            out_path=out_path,
+            pattern_file=pattern_file,
+            engine=resolved_engine,
+            duration=duration,
+            normalized=not no_normalize,
+            mp3_path=mp3_path,
+        )
+        console.print(f"[dim]Sidecar: {sidecar}[/dim]")
 
     console.print("[green]Render complete.[/green]")
 

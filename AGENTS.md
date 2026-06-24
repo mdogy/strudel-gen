@@ -49,7 +49,7 @@ Roles for any AI agent (Claude Code, Codex, etc.) collaborating on this project.
 
 1. SC running, post window shows `SuperDirt: listening on port 57120`.
 2. `scripts/bridge.sh` running.
-3. `scripts/repl.sh` running; browser at http://localhost:4321, output set to SuperDirt.
+3. `scripts/repl.sh` running; browser at <http://localhost:4321>, output set to SuperDirt.
 4. Test with `s("bd")` — sound from SC.
 5. Paste pattern, iterate.
 6. In SC: `s.recHeaderFormat="WAV"; s.recSampleFormat="int24";`
