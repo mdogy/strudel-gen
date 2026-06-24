@@ -2,6 +2,7 @@
 
 import io
 import subprocess
+from collections.abc import Generator
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -9,8 +10,15 @@ import pytest
 
 from strudel_gen.sc import SCError, SCManager
 
+_FAKE_SCLANG = "/usr/bin/sclang"
+
 
 class TestSCManagerInit:
+    @pytest.fixture(autouse=True)
+    def _mock_sclang(self) -> Generator[None, None, None]:
+        with patch("strudel_gen.detect._find_sclang", return_value=_FAKE_SCLANG):
+            yield
+
     def test_init_default_startup_file(self) -> None:
         manager = SCManager()
         assert manager._startup_file.name == "startup.scd"
@@ -22,6 +30,11 @@ class TestSCManagerInit:
 
 
 class TestSCManagerStart:
+    @pytest.fixture(autouse=True)
+    def _mock_sclang(self) -> Generator[None, None, None]:
+        with patch("strudel_gen.detect._find_sclang", return_value=_FAKE_SCLANG):
+            yield
+
     def _make_mock_proc(self, output: str) -> MagicMock:
         mock_proc = MagicMock(spec=subprocess.Popen)
         mock_proc.pid = 54321
@@ -46,6 +59,11 @@ class TestSCManagerStart:
 
 
 class TestSCManagerContextManager:
+    @pytest.fixture(autouse=True)
+    def _mock_sclang(self) -> Generator[None, None, None]:
+        with patch("strudel_gen.detect._find_sclang", return_value=_FAKE_SCLANG):
+            yield
+
     def test_context_manager_starts_and_stops(self) -> None:
         mock_proc = MagicMock(spec=subprocess.Popen)
         mock_proc.pid = 54321
