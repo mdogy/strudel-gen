@@ -2,4 +2,3 @@
 setcps 1.0
 d1 $ sound "bd" # gain 0.8 # orbit 0
 setcps 1.2
-
