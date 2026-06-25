@@ -10,6 +10,7 @@ from .parser import (
     Layer,
     PatternFile,
     StackExpr,
+    StackItem,
 )
 from .validator import resolve_synth
 
@@ -26,7 +27,7 @@ def _emit_arg(a: Arg) -> str:
     if a.kind == "STRING":
         return f'"{a.value}"'
     if a.kind == "IDENT":
-        return a.value
+        return str(a.value)
     if a.kind == "LAMBDA_CALL":
         pair = a.value
         assert isinstance(pair, tuple)
@@ -42,7 +43,7 @@ def _emit_chain_call(c: ChainCall) -> str:
     name = _RENAME.get(c.name, c.name)
     # Special handling for delay with "l:t:fb" string
     if c.name == "delay" and c.args and c.args[0].kind == "STRING":
-        val = c.args[0].value
+        val = str(c.args[0].value)
         parts = val.split(":")
         if len(parts) == 3:
             lev, t, fb = parts
@@ -98,7 +99,7 @@ def _emit_cat_expr(expr: CatExpr) -> str:
     return f"({body})"
 
 
-def _emit_stack_body(items: list, symtab: dict[str, str]) -> str:
+def _emit_stack_body(items: list[StackItem], symtab: dict[str, str]) -> str:
     """Emit stack items as a single Tidal stack expression."""
     parts: list[str] = []
     for item in items:
@@ -113,11 +114,8 @@ def _emit_stack_body(items: list, symtab: dict[str, str]) -> str:
             parts.append(ref)
         else:
             # Plain variable reference — look up in symtab
-            ref = symtab.get(item)
-            if ref:
-                parts.append(ref)
-            else:
-                parts.append(f's "{item}"')
+            looked_up = symtab.get(str(item))
+            parts.append(looked_up if looked_up else f's "{item}"')
     if len(parts) == 1:
         return parts[0]
     return f"stack({', '.join(parts)})"

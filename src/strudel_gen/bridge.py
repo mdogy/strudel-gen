@@ -38,11 +38,12 @@ class BridgeManager:
     @staticmethod
     def _resolve_strudel_dir() -> Path:
         det = detect()
-        if det.strudel_dir is None:
+        strudel_dir = det.strudel_dir
+        if strudel_dir is None:
             raise BridgeError(
                 "Strudel clone not found. Set STRUDEL_DIR env var or clone to ~/devel/strudel"
             )
-        return det.strudel_dir
+        return strudel_dir
 
     def start(self) -> None:
         """Start the OSC bridge and wait for the ready signal."""

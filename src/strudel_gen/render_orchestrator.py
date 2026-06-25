@@ -29,7 +29,7 @@ def _sc_stdout_drainer(
     assert hasattr(stream, "readline")
     while not stop_event.is_set():
         try:
-            line = stream.readline()  # type: ignore[attr-defined]
+            line = stream.readline()
             if not line:
                 break
         except ValueError:

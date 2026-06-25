@@ -271,8 +271,8 @@ class _Parser:
             val_str = tok.value
             self.pos += 1
             # Check for arithmetic operator
-            if self.peek() and self.peek().kind in {"PLUS", "STAR", "SLASH"}:
-                op = self.peek()
+            op = self.peek()
+            if op and op.kind in {"PLUS", "STAR", "SLASH"}:
                 self.pos += 1
                 rhs = self._consume("NUMBER")
                 lhs = float(val_str)
@@ -446,7 +446,8 @@ class _Parser:
             # Could be a lambda or a variable ref
             saved = self.pos
             self.pos += 1
-            if self.peek() and self.peek().kind == "ARROW":
+            next_tok = self.peek()
+            if next_tok and next_tok.kind == "ARROW":
                 self.pos = saved  # rewind
                 return self._parse_lambda()
             # It's a variable reference (like `cpm` in arrange chain calls)
