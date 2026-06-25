@@ -26,9 +26,9 @@ make smoke-render  # renders src/tidal/sample.tidal → /tmp/smoke-render.wav
 
 1. **T8 — Doctor extensions.** `make doctor` shows rows for ghci, tidal package, ffmpeg with per-OS install hints.
 
-3. **T9 — Documentation pass.** README diagram + `docs/quick-start.md` rewrite + `docs/tidal-guide.md`.
+2. **T9 — Documentation pass.** README diagram + `docs/quick-start.md` rewrite + `docs/tidal-guide.md`.
 
-4. **T10 — E2E acceptance.** `make smoke-render` from clean shell; CI `tidal-smoke` nightly job that renders a short pattern end-to-end.
+3. **T10 — E2E acceptance.** `make smoke-render` from clean shell; CI `tidal-smoke` nightly job that renders a short pattern end-to-end.
 
 ### Closed this session (R1-R8)
 

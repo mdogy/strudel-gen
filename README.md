@@ -2,7 +2,8 @@
 
 [![CI](https://github.com/mdogy/strudel-gen/actions/workflows/ci.yml/badge.svg)](https://github.com/mdogy/strudel-gen/actions/workflows/ci.yml)
 
-Local, prompt-driven pipeline for generating ambient background music (WAV/MP3) from a mood description. Designed for video soundscapes — arbitrarily long, loopable, no human interaction required after the prompt.
+Local, prompt-driven pipeline for generating ambient background music (WAV/MP3) from a mood description.
+Designed for video soundscapes — arbitrarily long, loopable, no human interaction required after the prompt.
 
 ## How it works
 

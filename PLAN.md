@@ -1,9 +1,10 @@
 # PLAN.md
 
 > **READ FIRST if you're picking this up cold:**
+>
 > - **[TODO.md "RESUME HERE"](TODO.md#-resume-here-next-session)** — what to do today, R1–R8 in priority order.
-> - **[docs/redesign-tidal.md §12 "State of the world"](docs/redesign-tidal.md#12-state-of-the-world-verified-2026-05-25)** — what works now, what doesn't, smoke-test command.
-> - **[docs/redesign-tidal.md §13 "Synth registry"](docs/redesign-tidal.md#13-superdirt-synth-registry-verified-2026-05-25)** — the 28 working synth names; never use `supersine` or `supertri`.
+> - **[§12 "State of the world"](docs/redesign-tidal.md#12-state-of-the-world-verified-2026-05-25)** — what works now, what doesn't, smoke-test command.
+> - **[§13 Synth registry](docs/redesign-tidal.md#13-superdirt-synth-registry-verified-2026-05-25)** — 28 synths; avoid `supersine`/`supertri`.
 >
 > This file (PLAN.md) is the strategic / architectural plan: goal, non-goals,
 > the 5-stage pipeline, the phase history, the path to a v1 ship.

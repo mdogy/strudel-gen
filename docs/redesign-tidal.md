@@ -1,6 +1,7 @@
 # Redesign: Tidal Cycles Pipeline (Phase 2)
 
 > **READ FIRST if you are picking this up cold:**
+>
 > 1. **[§12 State of the world](#12-state-of-the-world-verified-2026-05-25)** — what works today, smoke-test command, what doesn't work yet.
 > 2. **[§13 SuperDirt synth registry](#13-superdirt-synth-registry-verified-2026-05-25)** — only use synth names from this list; `supersine`/`supertri` produce silence.
 > 3. **[§14 Pitfalls catalog](#14-pitfalls-catalog-expanded-with-2026-05-25-findings)** — the 13 specific failure modes already debugged.
@@ -110,7 +111,7 @@ revision in git history). Compressed reasons:
 Replace `skill/SKILL.md` with the file below. The description IS the trigger;
 do not rewrite it without testing trigger sensitivity.
 
-~~~markdown
+```markdown
 ---
 name: ambient-render
 description: |
@@ -159,7 +160,7 @@ a short Strudel `.js` pattern and running the project's render pipeline.
 - Every layer must have `.slow(>=4)` and `.room(>=0.7)`.
 - Use `.orbit(N)` for layer separation, N ∈ {0..5}.
 - No arrow-function modifiers beyond single-call: `x => x.<method>(<args>)`.
-~~~
+```
 
 ### 2.2 Smoke-test the skill description
 
@@ -1719,7 +1720,7 @@ superhat                              superpwm
 ### P13 — Zombie `ghc` process surviving render shutdown
 
 - **Symptom:** `top` shows a `ghc` (not `ghci`, not `stack`) at 99% CPU
-  + several GB RAM after `scripts/render_tidal.py` has exited.
+  - several GB RAM after `scripts/render_tidal.py` has exited.
 - **Root cause:** `TidalManager.stop()` SIGTERMs the `stack ghci`
   wrapper, but `stack` spawns `ghc` as a grandchild. The grandchild is
   not reparented to init under SIGTERM and continues running.
