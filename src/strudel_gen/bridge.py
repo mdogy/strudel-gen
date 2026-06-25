@@ -43,6 +43,7 @@ class BridgeManager:
             raise BridgeError(
                 "Strudel clone not found. Set STRUDEL_DIR env var or clone to ~/devel/strudel"
             )
+        assert isinstance(strudel_dir, Path)
         return strudel_dir
 
     def start(self) -> None:

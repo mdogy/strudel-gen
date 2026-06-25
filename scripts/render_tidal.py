@@ -5,6 +5,7 @@ Legacy entry point for backward compatibility. The canonical CLI invocation is:
 
     strudel-gen render --engine tidal --pattern <file>.tidal --duration N --out <file>.wav
 """
+
 import sys
 from pathlib import Path
 
