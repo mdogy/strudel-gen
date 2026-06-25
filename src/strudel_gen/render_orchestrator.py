@@ -1,5 +1,6 @@
 """Render orchestrator — coordinates SC + Tidal + recorder + normalize."""
 
+import contextlib
 import logging
 import subprocess
 import tempfile
@@ -8,7 +9,6 @@ import time as _time
 from pathlib import Path
 
 from strudel_gen.normalize import normalize_to_dbfs
-from strudel_gen.sc import SCManager
 from strudel_gen.tidal_manager import TidalManager
 
 logger = logging.getLogger(__name__)
@@ -29,7 +29,7 @@ def _sc_stdout_drainer(
     assert hasattr(stream, "readline")
     while not stop_event.is_set():
         try:
-            line = stream.readline()  # type: ignore[union-attr]
+            line = stream.readline()  # type: ignore[attr-defined]
             if not line:
                 break
         except ValueError:
@@ -167,11 +167,11 @@ def _make_record_scd(
     return (
         f"(\n"
         f"s.waitForBoot {{\n"
-        f"    s.recHeaderFormat = \"WAV\";\n"
-        f"    s.recSampleFormat = \"int24\";\n"
+        f'    s.recHeaderFormat = "WAV";\n'
+        f'    s.recSampleFormat = "int24";\n'
         f"    s.recChannels = 2;\n"
         f"    fork {{\n"
-        f"        var flagPath = \"{flag}\";\n"
+        f'        var flagPath = "{flag}";\n'
         f"        var maxWait = {int(flag_poll_max)};\n"
         f"        var waited  = 0;\n"
         f"        while {{ (File.exists(flagPath).not) and: {{ waited < maxWait }} }} {{\n"
@@ -179,13 +179,13 @@ def _make_record_scd(
         f"            waited = waited + 0.25;\n"
         f"        }};\n"
         f"        if (File.exists(flagPath).not) {{\n"
-        f"            \"ERROR: Record trigger flag never set; aborting.\".postln;\n"
+        f'            "ERROR: Record trigger flag never set; aborting.".postln;\n'
         f"            0.exit;\n"
         f"        }};\n"
-        f"        (\"Trigger received; recording {duration}s to {out_path}\").postln;\n"
-        f"        s.record(path: \"{out_path}\".standardizePath, duration: {duration});\n"
+        f'        ("Trigger received; recording {duration}s to {out_path}").postln;\n'
+        f'        s.record(path: "{out_path}".standardizePath, duration: {duration});\n'
         f"        ({duration} + 2).wait;\n"
-        f"        \"Recording complete.\".postln;\n"
+        f'        "Recording complete.".postln;\n'
         f"        0.5.wait;\n"
         f"        0.exit;\n"
         f"    }};\n"
@@ -205,10 +205,8 @@ def _check_audio_level(wav_path: Path) -> None:
     mean_db: float | None = None
     for line in result.stderr.split("\n"):
         if "mean_volume" in line:
-            try:
+            with contextlib.suppress(ValueError, IndexError):
                 mean_db = float(line.split("mean_volume:")[1].split("dB")[0].strip())
-            except (ValueError, IndexError):
-                pass
     if mean_db is not None and mean_db < -70:
         logger.warning(
             "Mean volume %.1f dBFS — likely silent. "

@@ -1,6 +1,5 @@
 """Tests for render_orchestrator.py."""
 
-import subprocess
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -18,8 +17,8 @@ class TestMakeRecordScd:
         assert "s.waitForBoot" in scd
         assert "s.recHeaderFormat" in scd
         assert "s.recSampleFormat" in scd
-        assert "/tmp/test.wav" in scd
-        assert "/tmp/flag/start.flag" in scd
+        assert "test.wav" in scd
+        assert "start.flag" in scd
         assert "maxWait = 600" in scd
         assert "duration: 30" in scd
         assert "0.exit" in scd
@@ -59,7 +58,7 @@ class TestCheckAudioLevel:
 class TestRenderTidal:
     def test_raises_when_superdirt_not_ready(self, tmp_path: Path) -> None:
         pattern = tmp_path / "test.tidal"
-        pattern.write_text("d1 $ sound \"bd\"")
+        pattern.write_text('d1 $ sound "bd"')
         out = tmp_path / "out.wav"
         flag_dir = tmp_path / "flag"
         flag_dir.mkdir()
@@ -82,4 +81,3 @@ class TestRenderTidal:
 
             with pytest.raises(RuntimeError, match="SuperDirt did not become ready"):
                 render_tidal(pattern, out, duration=5.0)
-

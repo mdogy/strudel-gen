@@ -4,8 +4,8 @@ import subprocess
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
 import psutil
+import pytest
 
 from strudel_gen.tidal_manager import TidalError, TidalManager
 

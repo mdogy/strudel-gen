@@ -1,4 +1,5 @@
 """Tests for transpiler/lexer.py — tokenization."""
+
 import pytest
 
 from strudel_gen.transpiler.lexer import Token, tokenize
@@ -96,7 +97,6 @@ class TestTokenize:
         assert kinds == ["LBRACE", "RBRACE"]
 
     def test_colon(self) -> None:
-        tokens = tokenize('"l:t:fb"')
         assert tokenize("a:b")[0].kind == "IDENT"
         assert tokenize("a:b")[1].kind == "COLON"
         assert tokenize("a:b")[2].kind == "IDENT"

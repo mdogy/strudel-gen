@@ -1,5 +1,6 @@
 """Tidal Cycles lifecycle — spawn ghci, evaluate .tidal patterns, hush."""
 
+import contextlib
 import logging
 import os
 import select
@@ -82,9 +83,7 @@ class TidalManager:
 
     def start(self) -> None:
         """Start ghci with --no-load, then :script BootTidal.hs."""
-        logger.info(
-            "Starting Tidal ghci (%s) in %s", self._boot_file, self._tidal_dir
-        )
+        logger.info("Starting Tidal ghci (%s) in %s", self._boot_file, self._tidal_dir)
         self._process = subprocess.Popen(
             ["stack", "ghci", "--no-load"],
             stdin=subprocess.PIPE,
@@ -98,9 +97,7 @@ class TidalManager:
         self._reader_thread.start()
         if not self._ready.wait(timeout=self._timeout):
             self.stop()
-            raise TidalError(
-                f"GHCi did not become ready within {self._timeout}s"
-            )
+            raise TidalError(f"GHCi did not become ready within {self._timeout}s")
         logger.debug("GHCi ready, loading BootTidal.hs")
         self._ready.clear()
         assert self._process.stdin is not None
@@ -113,9 +110,7 @@ class TidalManager:
         self._process.stdin.flush()
         if not self._ready.wait(timeout=self._timeout):
             self.stop()
-            raise TidalError(
-                f"BootTidal.hs did not load within {self._timeout}s"
-            )
+            raise TidalError(f"BootTidal.hs did not load within {self._timeout}s")
         logger.info("Tidal ghci is ready")
 
     def eval(self, code: str) -> None:
@@ -147,16 +142,12 @@ class TidalManager:
                 return
             logger.info("Killing %d child process(es) of pid=%d", len(children), pid)
             for child in children:
-                try:
+                with contextlib.suppress(psutil.NoSuchProcess):
                     child.terminate()
-                except psutil.NoSuchProcess:
-                    pass
             _gone, alive = psutil.wait_procs(children, timeout=5)
             for p in alive:
-                try:
+                with contextlib.suppress(psutil.NoSuchProcess):
                     p.kill()
-                except psutil.NoSuchProcess:
-                    pass
         except psutil.NoSuchProcess:
             pass
 

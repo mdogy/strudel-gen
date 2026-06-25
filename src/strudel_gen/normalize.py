@@ -148,9 +148,12 @@ def to_mp3(wav_path: Path, bitrate: int = 320) -> Path:
     mp3_path = wav_path.with_suffix(".mp3")
     cmd = [
         "ffmpeg",
-        "-i", str(wav_path),
-        "-codec:a", "libmp3lame",
-        "-b:a", f"{bitrate}k",
+        "-i",
+        str(wav_path),
+        "-codec:a",
+        "libmp3lame",
+        "-b:a",
+        f"{bitrate}k",
         "-y",
         str(mp3_path),
     ]

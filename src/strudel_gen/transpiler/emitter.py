@@ -1,4 +1,5 @@
 """AST → .tidal source."""
+
 from __future__ import annotations
 
 from .parser import (
@@ -44,9 +45,9 @@ def _emit_chain_call(c: ChainCall) -> str:
         val = c.args[0].value
         parts = val.split(":")
         if len(parts) == 3:
-            l, t, fb = parts
-            return f"# delay {l} # delaytime {t} # delayfeedback {fb}"
-        return f'# delay {_emit_arg(c.args[0])}'
+            lev, t, fb = parts
+            return f"# delay {lev} # delaytime {t} # delayfeedback {fb}"
+        return f"# delay {_emit_arg(c.args[0])}"
     args = " ".join(_emit_arg(a) for a in c.args)
     return f"# {name} {args}".rstrip()
 
@@ -125,8 +126,6 @@ def _emit_stack_body(items: list, symtab: dict[str, str]) -> str:
 def _build_symtab(assignments: list[Assign]) -> dict[str, str]:
     """Build a symbol table mapping var names → Tidal expression strings."""
     symtab: dict[str, str] = {}
-    # First pass: collect all assignment names
-    names = {a.name for a in assignments}
     # Multiple passes until stable (for forward references)
     changed = True
     while changed:
@@ -135,14 +134,14 @@ def _build_symtab(assignments: list[Assign]) -> dict[str, str]:
             if a.name in symtab:
                 continue
             try:
-                symtab[a.name] = _assign_to_tidal(a, symtab, names)
+                symtab[a.name] = _assign_to_tidal(a, symtab)
                 changed = True
             except KeyError:
                 pass  # forward reference, try next pass
     return symtab
 
 
-def _assign_to_tidal(a: Assign, symtab: dict[str, str], all_names: set[str]) -> str:
+def _assign_to_tidal(a: Assign, symtab: dict[str, str]) -> str:
     """Convert an assignment to a Tidal expression."""
     val = a.value
     if isinstance(val, Layer):

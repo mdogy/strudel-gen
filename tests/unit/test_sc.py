@@ -14,7 +14,7 @@ _FAKE_SCLANG = "/usr/bin/sclang"
 
 
 class TestSCManagerInit:
-    @pytest.fixture(autouse=True)
+    @pytest.fixture(autouse=True)  # type: ignore[misc]
     def _mock_sclang(self) -> Generator[None, None, None]:
         with patch("strudel_gen.detect._find_sclang", return_value=_FAKE_SCLANG):
             yield
@@ -30,7 +30,7 @@ class TestSCManagerInit:
 
 
 class TestSCManagerStart:
-    @pytest.fixture(autouse=True)
+    @pytest.fixture(autouse=True)  # type: ignore[misc]
     def _mock_sclang(self) -> Generator[None, None, None]:
         with patch("strudel_gen.detect._find_sclang", return_value=_FAKE_SCLANG):
             yield
@@ -59,7 +59,7 @@ class TestSCManagerStart:
 
 
 class TestSCManagerContextManager:
-    @pytest.fixture(autouse=True)
+    @pytest.fixture(autouse=True)  # type: ignore[misc]
     def _mock_sclang(self) -> Generator[None, None, None]:
         with patch("strudel_gen.detect._find_sclang", return_value=_FAKE_SCLANG):
             yield

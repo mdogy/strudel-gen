@@ -4,6 +4,7 @@ Public API:
     transpile(src: str) -> str
     transpile_file(in_path: Path, out_path: Path) -> None
 """
+
 from pathlib import Path
 
 from .emitter import emit

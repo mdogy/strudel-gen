@@ -1,4 +1,5 @@
 """Reject unsupported Strudel constructs with a clear error."""
+
 from __future__ import annotations
 
 from difflib import get_close_matches
@@ -12,32 +13,98 @@ from .parser import (
     StackExpr,
 )
 
-_ALLOWED_CHAIN_CALLS = frozenset({
-    "s", "n", "room", "lpf", "hpf", "gain", "delay", "delayt", "delayfb",
-    "vib", "vibdepth", "speed", "pan", "crush", "shape",
-    "slow", "fast", "rev", "orbit", "every", "sometimes", "often", "rarely",
-    "mask", "begin", "end", "attack", "decay", "release", "rsize",
-    "lpenv", "lpa", "lps", "lpd", "lpr",
-    "delay", "bank", "note", "scale", "scaleTranspose", "cpm",
-    "sound",
-})
+_ALLOWED_CHAIN_CALLS = frozenset(
+    {
+        "s",
+        "n",
+        "room",
+        "lpf",
+        "hpf",
+        "gain",
+        "delay",
+        "delayt",
+        "delayfb",
+        "vib",
+        "vibdepth",
+        "speed",
+        "pan",
+        "crush",
+        "shape",
+        "slow",
+        "fast",
+        "rev",
+        "orbit",
+        "every",
+        "sometimes",
+        "often",
+        "rarely",
+        "mask",
+        "begin",
+        "end",
+        "attack",
+        "decay",
+        "release",
+        "rsize",
+        "lpenv",
+        "lpa",
+        "lps",
+        "lpd",
+        "lpr",
+        "bank",
+        "note",
+        "scale",
+        "scaleTranspose",
+        "cpm",
+        "sound",
+    }
+)
 
 _ALLOWED_HEADS = frozenset({"note", "s", "n", "sound"})
 
-_KNOWN_SYNTHS = frozenset({
-    "super808", "superchip", "superclap", "supercomparator", "superfm",
-    "superfork", "supergong", "supergrind", "superhammond", "superhat",
-    "superhex", "superhoover", "superkick", "supermandolin", "supernoise",
-    "superpiano", "superprimes", "superpwm", "superreese", "supersaw",
-    "supersiren", "supersnare", "supersquare", "superstatic", "supertron",
-    "supervibe", "superwavemechanics", "superzow",
-    # GM synths
-    "gm_synth_bass_1", "gm_pad_poly", "gm_pad_metallic",
-})
+_KNOWN_SYNTHS = frozenset(
+    {
+        "super808",
+        "superchip",
+        "superclap",
+        "supercomparator",
+        "superfm",
+        "superfork",
+        "supergong",
+        "supergrind",
+        "superhammond",
+        "superhat",
+        "superhex",
+        "superhoover",
+        "superkick",
+        "supermandolin",
+        "supernoise",
+        "superpiano",
+        "superprimes",
+        "superpwm",
+        "superreese",
+        "supersaw",
+        "supersiren",
+        "supersnare",
+        "supersquare",
+        "superstatic",
+        "supertron",
+        "supervibe",
+        "superwavemechanics",
+        "superzow",
+        # GM synths
+        "gm_synth_bass_1",
+        "gm_pad_poly",
+        "gm_pad_metallic",
+    }
+)
 
-_KNOWN_SAMPLE_BANKS = frozenset({
-    "RolandTR909", "RolandTR808", "LinnDrum",
-})
+_KNOWN_SAMPLE_BANKS = frozenset(
+    {
+        "RolandTR909",
+        "RolandTR808",
+        "LinnDrum",
+    }
+)
 
 # GM → SuperDirt synth mapping for sample-name bridge
 _GM_TO_SUPERDIRT = {
@@ -68,15 +135,14 @@ def resolve_synth(name: str) -> str:
 def _validate_chain_calls(chain: list[ChainCall], context: str = "") -> None:
     for call in chain:
         if call.name not in _ALLOWED_CHAIN_CALLS:
-            raise UnsupportedConstructError(
-                f"unsupported method .{call.name}(){context}"
-            )
+            raise UnsupportedConstructError(f"unsupported method .{call.name}(){context}")
 
 
 def _is_simple_name(s: str) -> bool:
     """Check if a string looks like a simple identifier name (not a pattern)."""
     import re
-    return bool(re.match(r'^[A-Za-z_][A-Za-z0-9_]*$', s.strip()))
+
+    return bool(re.match(r"^[A-Za-z_][A-Za-z0-9_]*$", s.strip()))
 
 
 def _validate_layer(layer: Layer) -> None:
@@ -85,7 +151,13 @@ def _validate_layer(layer: Layer) -> None:
         raise UnsupportedConstructError(
             f"unsupported head '{layer.head}()' — expected one of note/s/n"
         )
-    if head == "s" and _is_simple_name(layer.head_arg) and layer.head_arg not in _KNOWN_SYNTHS and layer.head_arg not in _KNOWN_SAMPLE_BANKS:
+    unknown = (
+        head == "s"
+        and _is_simple_name(layer.head_arg)
+        and layer.head_arg not in _KNOWN_SYNTHS
+        and layer.head_arg not in _KNOWN_SAMPLE_BANKS
+    )
+    if unknown:
         hint = _closest_synth(layer.head_arg)
         if hint:
             msg = f"unknown synth '{layer.head_arg}' — not registered in SuperDirt"

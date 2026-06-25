@@ -4,7 +4,7 @@ import json
 import logging
 import subprocess
 import time as _time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated
 
@@ -19,7 +19,6 @@ from strudel_gen.normalize import normalize_to_dbfs, to_mp3
 from strudel_gen.recorder import RecorderScript
 from strudel_gen.render_orchestrator import render_tidal
 from strudel_gen.sc import SCManager
-from strudel_gen.tidal_manager import TidalManager
 
 app = typer.Typer(
     name="strudel-gen",
@@ -52,7 +51,7 @@ def _write_render_sidecar(
         "mp3": str(mp3_path) if mp3_path else None,
         "normalized": normalized,
         "target_dbfs": target_dbfs if normalized else None,
-        "rendered_at": datetime.now(timezone.utc).isoformat(),
+        "rendered_at": datetime.now(UTC).isoformat(),
     }
     sidecar.write_text(json.dumps(data, indent=2))
     logger.info("Wrote render sidecar: %s", sidecar)
@@ -318,7 +317,9 @@ def render(
     if resolved_engine == "tidal":
         tidal_path = (pattern_file or Path()).expanduser().resolve() if pattern_file else None
         if not tidal_path or not tidal_path.exists():
-            console.print("[red]A valid --pattern <file>.tidal is required for --engine tidal[/red]")
+            console.print(
+                "[red]A valid --pattern <file>.tidal is required for --engine tidal[/red]"
+            )
             raise typer.Exit(1)
 
         console.print(f"[bold]Tidal pattern:[/bold] {tidal_path.name}")

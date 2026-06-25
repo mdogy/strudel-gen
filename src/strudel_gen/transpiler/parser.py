@@ -1,11 +1,10 @@
 """Parse a token stream into a PatternFile AST."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Literal
 
 from .lexer import Token
-
 
 # ---------------------------------------------------------------------------
 # AST nodes
@@ -34,6 +33,7 @@ class Layer:
 @dataclass
 class CatExpr:
     """cat(string, string, ...)  optionally followed by .chain() calls."""
+
     args: list[Arg]
     chain: list[ChainCall] = field(default_factory=list)
 
@@ -44,6 +44,7 @@ StackItem = Layer | str | tuple[str, list[ChainCall]]
 @dataclass
 class StackExpr:
     """stack(layer_or_var, ...)  optionally followed by .chain() calls."""
+
     items: list[StackItem]
     chain: list[ChainCall] = field(default_factory=list)
 
@@ -51,6 +52,7 @@ class StackExpr:
 @dataclass
 class ArrangeExpr:
     """arrange([N, var], [N, var], ...)  optionally with .cpm(N) chain."""
+
     items: list[tuple[int, str]]
     chain: list[ChainCall] = field(default_factory=list)
 
@@ -75,6 +77,7 @@ class PatternFile:
     For new-style code (let + arrange):
       cpm = float, statements = [...], arrange = ArrangeExpr
     """
+
     cpm: float | None
     layers: list[Layer] = field(default_factory=list)
     statements: list[Assign] = field(default_factory=list)
@@ -138,11 +141,10 @@ class _Parser:
             if not tok:
                 break
             # skip discarded constructs
-            if tok.kind == "IDENT" and tok.value in {"samples", "stack" if self._is_stack_call() else ""}:
-                # Detect samples() and skip
-                if tok.value == "samples":
-                    self._skip_samples()
-                    continue
+            _discard = {"samples", "stack" if self._is_stack_call() else ""}
+            if tok.kind == "IDENT" and tok.value in _discard and tok.value == "samples":
+                self._skip_samples()
+                continue
             if tok.kind == "IDENT" and tok.value == "setcpm":
                 cpm = float(self._parse_setcpm())
                 continue
@@ -463,7 +465,8 @@ class _Parser:
             # Full arithmetic expression
             self.pos -= 1  # put number back, _parse_arith_arg will re-parse
             return self._parse_arith_arg()
-        val: float | int = float(num_tok.value) if "." in num_tok.value else int(float(num_tok.value))
+        raw = num_tok.value
+        val: float | int = float(raw) if "." in raw else int(float(raw))
         return Arg(kind="NUMBER", value=val)
 
     def _parse_arith_arg(self) -> Arg:

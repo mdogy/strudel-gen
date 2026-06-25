@@ -1,10 +1,10 @@
 """Tests for transpiler/parser.py — AST construction."""
+
 import pytest
 
 from strudel_gen.transpiler.lexer import tokenize
 from strudel_gen.transpiler.parser import (
     CatExpr,
-    ChainCall,
     Layer,
     ParseError,
     StackExpr,
@@ -156,7 +156,10 @@ class TestParse:
         assert note_call.args[0].value == "0 2 4 7"
 
     def test_stack_with_variable_ref(self) -> None:
-        src = 'let cpm = 135; let a = note("c2").s("supersaw").slow(8); let b = stack(a, note("eb3").s("supersaw").slow(6));'
+        src = (
+            'let cpm = 135; let a = note("c2").s("supersaw").slow(8);'
+            ' let b = stack(a, note("eb3").s("supersaw").slow(6));'
+        )
         tree = parse(tokenize(src))
         assert tree.statements[1].name == "b"
         val = tree.statements[1].value
@@ -208,7 +211,10 @@ class TestParse:
         assert tree.layers[0].head_arg == "supersaw"
 
     def test_cpm_assigned_to_layer_eval_fallback(self) -> None:
-        src = 'let cpm = note("c2").s("supersaw").slow(4); let x = note("c2").s("supersaw").slow(4); arrange([4, x])'
+        src = (
+            'let cpm = note("c2").s("supersaw").slow(4);'
+            ' let x = note("c2").s("supersaw").slow(4); arrange([4, x])'
+        )
         tree = parse(tokenize(src))
         assert tree.cpm == 0.0
 
@@ -226,12 +232,12 @@ class TestParse:
         assert tree.arrange.items == []
 
     def test_stack_unexpected_item_raises(self) -> None:
-        src = 'let cpm = 135; let x = stack(42);'
+        src = "let cpm = 135; let x = stack(42);"
         with pytest.raises(ParseError):
             parse(tokenize(src))
 
     def test_cat_unexpected_item_raises(self) -> None:
-        src = 'let cpm = 135; let x = cat(42);'
+        src = "let cpm = 135; let x = cat(42);"
         with pytest.raises(ParseError):
             parse(tokenize(src))
 

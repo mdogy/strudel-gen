@@ -1,4 +1,5 @@
 """Tokenize Strudel source into a flat stream."""
+
 from __future__ import annotations
 
 import re

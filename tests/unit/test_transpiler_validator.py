@@ -1,4 +1,5 @@
 """Tests for transpiler/validator.py — construct rejection."""
+
 import pytest
 
 from strudel_gen.transpiler import transpile
@@ -62,12 +63,18 @@ class TestValidator:
             assert "setcps" in result
 
     def test_new_chain_methods_pass(self) -> None:
-        src = 'setcpm(20)\nnote("c2").s("sine").mask("1 0").begin(0.25).end(0.75).attack(0.01).decay(0.1).release(0.3).rsize(0.5).slow(4)'
+        src = (
+            'setcpm(20)\nnote("c2").s("sine").mask("1 0")'
+            ".begin(0.25).end(0.75).attack(0.01).decay(0.1).release(0.3).rsize(0.5).slow(4)"
+        )
         result = transpile(src)
         assert "mask" in result
 
     def test_lpenv_chain_methods_pass(self) -> None:
-        src = 'setcpm(20)\nnote("c2").s("sine").lpenv(0.5).lpa(0.7).lps(0.3).lpd(0.2).lpr(0.4).slow(4)'
+        src = (
+            'setcpm(20)\nnote("c2").s("sine")'
+            ".lpenv(0.5).lpa(0.7).lps(0.3).lpd(0.2).lpr(0.4).slow(4)"
+        )
         result = transpile(src)
         assert "lpenv" in result
 
@@ -82,7 +89,10 @@ class TestValidator:
         assert "cat" in result
 
     def test_let_stack_validated(self) -> None:
-        src = 'let cpm = 135; let x = stack(s("supersaw").slow(4), note("c2").s("supersaw").slow(6)).slow(2); arrange([4, x])'
+        src = (
+            'let cpm = 135; let x = stack(s("supersaw").slow(4),'
+            ' note("c2").s("supersaw").slow(6)).slow(2); arrange([4, x])'
+        )
         result = transpile(src)
         assert "stack" in result
 
@@ -118,7 +128,10 @@ class TestValidator:
             transpile('let x = note("c2").s("supersaw").slow(4); arrange([4, x])')
 
     def test_stack_var_ref_with_chain_validated(self) -> None:
-        src = 'let cpm = 135; let a = note("c2").s("supersaw").slow(8); let b = stack(a.slow(2), note("eb3").s("supersaw").slow(6)); arrange([4, b])'
+        src = (
+            'let cpm = 135; let a = note("c2").s("supersaw").slow(8);'
+            ' let b = stack(a.slow(2), note("eb3").s("supersaw").slow(6)); arrange([4, b])'
+        )
         result = transpile(src)
         assert "stack" in result
 

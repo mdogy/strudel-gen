@@ -47,6 +47,7 @@ jobs:
         with:
           globs: |
             *.md
+            !HISTORY.md
             docs/**/*.md
             skill/**/*.md
 

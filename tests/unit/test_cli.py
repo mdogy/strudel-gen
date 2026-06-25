@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 
 from typer.testing import CliRunner
 
-from strudel_gen.cli import app, _write_render_sidecar
+from strudel_gen.cli import _write_render_sidecar, app
 from strudel_gen.detect import DetectionResult
 from strudel_gen.normalize import NormalizationError
 
@@ -178,10 +178,14 @@ class TestRenderCommand:
                 app,
                 [
                     "render",
-                    "--engine", "tidal",
-                    "--pattern", str(tidal_path),
-                    "--duration", "1",
-                    "--out", str(out_path),
+                    "--engine",
+                    "tidal",
+                    "--pattern",
+                    str(tidal_path),
+                    "--duration",
+                    "1",
+                    "--out",
+                    str(out_path),
                 ],
             )
 
@@ -190,7 +194,7 @@ class TestRenderCommand:
 
     def test_render_tidal_calls_orchestrator(self, tmp_path: Path) -> None:
         tidal_path = tmp_path / "pattern.tidal"
-        tidal_path.write_text("d1 $ sound \"bd\"")
+        tidal_path.write_text('d1 $ sound "bd"')
         out_path = tmp_path / "out.wav"
 
         with (
@@ -201,10 +205,14 @@ class TestRenderCommand:
                 app,
                 [
                     "render",
-                    "--engine", "tidal",
-                    "--pattern", str(tidal_path),
-                    "--duration", "5",
-                    "--out", str(out_path),
+                    "--engine",
+                    "tidal",
+                    "--pattern",
+                    str(tidal_path),
+                    "--duration",
+                    "5",
+                    "--out",
+                    str(out_path),
                 ],
             )
 
@@ -219,7 +227,7 @@ class TestRenderCommand:
     def test_render_tidal_infers_engine_from_extension(self, tmp_path: Path) -> None:
         """When --engine is 'auto', .tidal extension selects tidal engine."""
         tidal_path = tmp_path / "pattern.tidal"
-        tidal_path.write_text("d1 $ sound \"bd\"")
+        tidal_path.write_text('d1 $ sound "bd"')
         out_path = tmp_path / "out.wav"
 
         with (
@@ -230,9 +238,12 @@ class TestRenderCommand:
                 app,
                 [
                     "render",
-                    "--pattern", str(tidal_path),
-                    "--duration", "5",
-                    "--out", str(out_path),
+                    "--pattern",
+                    str(tidal_path),
+                    "--duration",
+                    "5",
+                    "--out",
+                    str(out_path),
                 ],
             )
 
@@ -241,7 +252,7 @@ class TestRenderCommand:
 
     def test_render_tidal_failure_reported(self, tmp_path: Path) -> None:
         tidal_path = tmp_path / "pattern.tidal"
-        tidal_path.write_text("d1 $ sound \"bd\"")
+        tidal_path.write_text('d1 $ sound "bd"')
         out_path = tmp_path / "out.wav"
 
         with (
@@ -255,10 +266,14 @@ class TestRenderCommand:
                 app,
                 [
                     "render",
-                    "--engine", "tidal",
-                    "--pattern", str(tidal_path),
-                    "--duration", "5",
-                    "--out", str(out_path),
+                    "--engine",
+                    "tidal",
+                    "--pattern",
+                    str(tidal_path),
+                    "--duration",
+                    "5",
+                    "--out",
+                    str(out_path),
                 ],
             )
 
@@ -278,7 +293,7 @@ class TestRenderCommand:
         assert result.exit_code == 1
         assert "required for" in result.output
 
-    def test_render_scd_via_explicit_engine(self, tmp_path: Path) -> None:  
+    def test_render_scd_via_explicit_engine(self, tmp_path: Path) -> None:
         scd_path = tmp_path / "any.ext"
         scd_path.write_text("// sc script")
         out_path = tmp_path / "out.wav"
@@ -286,7 +301,9 @@ class TestRenderCommand:
 
         completed = subprocess.CompletedProcess(
             args=["sclang", str(scd_path), str(out_path), "5"],
-            returncode=0, stdout="", stderr="",
+            returncode=0,
+            stdout="",
+            stderr="",
         )
 
         with (
@@ -298,10 +315,14 @@ class TestRenderCommand:
                 app,
                 [
                     "render",
-                    "--engine", "sc-native",
-                    "--pattern", str(scd_path),
-                    "--duration", "5",
-                    "--out", str(out_path),
+                    "--engine",
+                    "sc-native",
+                    "--pattern",
+                    str(scd_path),
+                    "--duration",
+                    "5",
+                    "--out",
+                    str(out_path),
                 ],
             )
 
@@ -405,9 +426,7 @@ class TestRenderCommand:
         out_path = tmp_path / "out.wav"
         out_path.write_bytes(b"RIFF" + b"\x00" * 32)
 
-        completed = subprocess.CompletedProcess(
-            args=["sclang"], returncode=0, stdout="", stderr=""
-        )
+        completed = subprocess.CompletedProcess(args=["sclang"], returncode=0, stdout="", stderr="")
 
         with (
             patch("strudel_gen.cli.detect", return_value=_detection()),
@@ -436,9 +455,7 @@ class TestRenderCommand:
         out_path.write_bytes(b"RIFF" + b"\x00" * 32)
         mp3_path = tmp_path / "out.mp3"
 
-        completed = subprocess.CompletedProcess(
-            args=["sclang"], returncode=0, stdout="", stderr=""
-        )
+        completed = subprocess.CompletedProcess(args=["sclang"], returncode=0, stdout="", stderr="")
 
         with (
             patch("strudel_gen.cli.detect", return_value=_detection()),
@@ -450,10 +467,14 @@ class TestRenderCommand:
                 app,
                 [
                     "render",
-                    "--pattern", str(scd_path),
-                    "--duration", "5",
-                    "--out", str(out_path),
-                    "--mp3", "320",
+                    "--pattern",
+                    str(scd_path),
+                    "--duration",
+                    "5",
+                    "--out",
+                    str(out_path),
+                    "--mp3",
+                    "320",
                 ],
             )
 
@@ -469,9 +490,7 @@ class TestRenderCommand:
         out_path = tmp_path / "out.wav"
         out_path.write_bytes(b"RIFF" + b"\x00" * 32)
 
-        completed = subprocess.CompletedProcess(
-            args=["sclang"], returncode=0, stdout="", stderr=""
-        )
+        completed = subprocess.CompletedProcess(args=["sclang"], returncode=0, stdout="", stderr="")
 
         with (
             patch("strudel_gen.cli.detect", return_value=_detection()),
@@ -483,10 +502,14 @@ class TestRenderCommand:
                 app,
                 [
                     "render",
-                    "--pattern", str(scd_path),
-                    "--duration", "5",
-                    "--out", str(out_path),
-                    "--mp3", "320",
+                    "--pattern",
+                    str(scd_path),
+                    "--duration",
+                    "5",
+                    "--out",
+                    str(out_path),
+                    "--mp3",
+                    "320",
                 ],
             )
 
@@ -528,7 +551,6 @@ class TestWriteRenderSidecar:
         assert data["normalized"] is False
         assert data["target_dbfs"] is None
         assert data["pattern"] is None
-
 
     def test_render_reports_normalization_warning(self, tmp_path: Path) -> None:
         out_path = tmp_path / "soundscape.wav"

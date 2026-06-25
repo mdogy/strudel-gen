@@ -53,12 +53,7 @@ class TestParseLoudnormJson:
         assert _parse_loudnorm_json("{broken") is None
 
     def test_parses_key_value_summary_format(self) -> None:
-        stderr = (
-            "input_i: -26.58\n"
-            "input_tp: -14.62\n"
-            "input_lra: 12.3\n"
-            "input_thresh: -37.82\n"
-        )
+        stderr = "input_i: -26.58\ninput_tp: -14.62\ninput_lra: 12.3\ninput_thresh: -37.82\n"
         result = _parse_loudnorm_json(stderr)
         assert result is not None
         assert result["input_i"] == "-26.58"
