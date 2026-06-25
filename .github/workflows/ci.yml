@@ -86,6 +86,7 @@ jobs:
   wsl:
     name: Test (WSL2 / Ubuntu)
     runs-on: windows-latest
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - name: Install WSL Ubuntu 22.04

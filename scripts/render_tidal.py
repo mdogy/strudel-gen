@@ -19,7 +19,7 @@ OUT = OUT.expanduser().resolve()
 
 OUT.parent.mkdir(parents=True, exist_ok=True)
 
-print(f"=== Tidal → WAV (via render_orchestrator) ===")
+print("=== Tidal → WAV (via render_orchestrator) ===")
 print(f"Pattern:  {PATTERN}")
 print(f"Duration: {DURATION}s")
 print(f"Output:   {OUT}")
